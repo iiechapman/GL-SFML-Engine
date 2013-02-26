@@ -31,7 +31,7 @@ int main (int argc, const char * argv[])
     sf::Font font;
     if (!font.loadFromFile("sansation.ttf"))
     	return EXIT_FAILURE;
-    sf::Text text("Hello SFML", font, 50);
+    sf::Text text("Hello WORLD", font, 50);
     text.setColor(sf::Color::Black);
 
     // Load a music to play
