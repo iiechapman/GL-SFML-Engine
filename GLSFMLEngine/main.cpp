@@ -6,12 +6,15 @@
 #include <iostream>
 #include "TextureHandler.h"
 #include "GameTypes.h"
-
+#include "Sprite.h"
 
 /*
  * Basic OpenGL 2d mario engine
  * Evan Chapman 2013
  */
+
+//Debug header
+Sprite* marioSprite;
 
 bool PLAYMUSIC = false;
 bool running;
@@ -66,7 +69,7 @@ GLuint textureID = 0;
 sf::Image textures[20];
 sf::Image tile[20];
 sf::Music titleSong;
-
+TextureHandler* TexHandler;
 
 void Init();
 void Display();
@@ -82,14 +85,17 @@ void Animate();
 void CalculateFPS();
 void Timer();
 void Idle();
+void Debug();
 
 int main ( int argc,char ** argv ) {
     Init();
     
+    //Play music
     if (PLAYMUSIC){
     titleSong.play();
     }
     
+    //Create opengl context
     std::cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB );
@@ -104,8 +110,12 @@ int main ( int argc,char ** argv ) {
     glutKeyboardUpFunc( KeyboardUp );
     glutSpecialFunc( SpecialKey );
     glutSpecialUpFunc( SpecialKeyUp );
+    //Created opengl Context
     
-    TextureLoad();
+    Debug();
+
+    
+   // TextureLoad();
     displayList = glGenLists( 1 );
     
     glutMainLoop();
@@ -116,25 +126,25 @@ int main ( int argc,char ** argv ) {
 }
 
 void Idle() {  
-    if ( pressed.up ) {
+    if ( pressed.kup ) {
         deltaPosition.y = delta*2;
         falling = false;
         jumping = true;
-    } else if( pressed.down ) {
+    } else if( pressed.kdown ) {
         deltaPosition.y = -delta;
     } else {
         deltaPosition.y = 0.0f;
     }
     
-    if ( pressed.left ) {
-        marioDirection = left;
+    if ( pressed.kleft ) {
+        marioDirection = leftd;
         marioAnim = leftAnim;
         running = true;
         stopped = false;
         deltaPosition.x = -delta;
 
-    } else if( pressed.right ) {
-        marioDirection = right;
+    } else if( pressed.kright ) {
+        marioDirection = rightd;
         marioAnim = rightAnim;
         running = true;
         stopped = false;
@@ -157,12 +167,15 @@ void Idle() {
     
     if ( jumping || falling ) {
         switch ( marioDirection ) {
-                case left:
+                case leftd:
                 marioAnim = jumpleft;
                 break;
                 
-            case right:
+            case rightd:
                 marioAnim = jumpright;
+                break;
+                
+            default:
                 break;
         }
     }
@@ -178,12 +191,15 @@ void Idle() {
     
     if ( stopped && !falling && !jumping ) {
         switch ( marioDirection ) {
-            case left:
+            case leftd:
                 marioAnim = stoppedleft;
                 break;
                 
-            case right:
+            case rightd:
                 marioAnim = stoppedright;
+                break;
+                
+            default:
                 break;
         }
     }
@@ -192,9 +208,9 @@ void Idle() {
     position.y += deltaPosition.y;
     position.z += deltaPosition.z;
     
-    std::cout   << "x: " << position.x
-                << " y: " << position.y
-                << " z: " << position.z << "\n";
+//    std::cout   << "x: " << position.x
+//                << " y: " << position.y
+//                << " z: " << position.z << "\n";
     
     //Rotate camera using WASD and parentheses
     if ( pressed.rbracket ) {
@@ -267,7 +283,7 @@ void Init(){
     tileSize.x = 1.09f;
     tileSize.y = .13f;
     
-    marioDirection = right;
+    marioDirection = rightd;
     marioAnim      = rightAnim;
     
     running = false;
@@ -539,19 +555,19 @@ void SpecialKey( int key, int x, int y ) {
     //std::cout << "Special Key: " << key << "\n";
     switch ( key ) {
         case 101:
-            pressed.up = true;
+            pressed.kup = true;
             break;
             
         case 103:
-            pressed.down = true;
+            pressed.kdown = true;
             break;
             
         case 100:
-            pressed.left = true;
+            pressed.kleft = true;
             break;
             
         case 102:
-            pressed.right = true;
+            pressed.kright = true;
             break;
             
         default:
@@ -562,19 +578,19 @@ void SpecialKey( int key, int x, int y ) {
 void SpecialKeyUp( int key, int x, int y ) {
     switch ( key ) {
         case 101:
-            pressed.up = false;
+            pressed.kup = false;
             break;
             
         case 103:
-            pressed.down = false;
+            pressed.kdown = false;
             break;
             
         case 100:
-            pressed.left = false;
+            pressed.kleft = false;
             break;
             
         case 102:
-            pressed.right = false;
+            pressed.kright = false;
             break;
             
         default:
@@ -592,6 +608,9 @@ void SetScene() {
     glEnable( GL_TEXTURE_2D );
     glEnable( GL_BLEND );
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    
+    //Start Debug Drawing
+    marioSprite->Draw();
     
     //start player drawing
     glBindTexture( GL_TEXTURE_2D, curFrame );
@@ -693,7 +712,12 @@ void Animate(){
 }
 
 
-
+void Debug() {
+    std::cout << "Debug Section: " << "\n";
+    
+    marioSprite = new Sprite();
+    
+}
 
 
 

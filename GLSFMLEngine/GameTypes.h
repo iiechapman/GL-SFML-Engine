@@ -11,35 +11,34 @@
 
 #include <iostream>
 
-#endif /* defined(__GLSFMLEngine__GameTypes__) */
-
-
-struct range_t{
+typedef struct range_s {
     int start;
     int middle;
     int end;
-};
+} range_t;
 
-enum direction_t{
-    left,right,up,down
-};
+typedef enum {
+    leftd,rightd,upd,downd
+} direction_t;
 
-struct dimensions_t{
+typedef struct dimensions_s{
     float x;
     float y;
     float z;
     float w;
-};
+} dimensions_t;
 
-struct buttons_t{
-    bool up;
-    bool down;
-    bool right;
-    bool left;
+typedef struct buttons_s{
+    bool kup;
+    bool kdown;
+    bool kright;
+    bool kleft;
     bool plus;
     bool minus;
     bool space;
     bool rbracket;
     bool lbracket;
-    bool w,a,s,d;
-};
+    bool a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z;
+} buttons_t;
+
+#endif /* defined(__GLSFMLEngine__GameTypes__) */

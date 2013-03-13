@@ -87,12 +87,9 @@
 		4E64DD9C16DD3C250027065F /* GLSFMLEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4EEB516B16EFFE1B0053EB4F /* Sprite */,
 				4E64DD9D16DD3C250027065F /* main.cpp */,
 				4EC167C416ECF3DE00ADEE26 /* GameTypes.h */,
-				4EC167C016ECF25700ADEE26 /* Sprite.cpp */,
-				4EC167C116ECF25700ADEE26 /* Sprite.h */,
-				4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */,
-				4EC167BE16ECDB1D00ADEE26 /* TextureHandler.h */,
 				4E64DD9F16DD3C250027065F /* Supporting Files */,
 			);
 			path = GLSFMLEngine;
@@ -106,6 +103,17 @@
 				4E64DDA216DD3C250027065F /* nice_music.ogg */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		4EEB516B16EFFE1B0053EB4F /* Sprite */ = {
+			isa = PBXGroup;
+			children = (
+				4EC167C016ECF25700ADEE26 /* Sprite.cpp */,
+				4EC167C116ECF25700ADEE26 /* Sprite.h */,
+				4EC167BE16ECDB1D00ADEE26 /* TextureHandler.h */,
+				4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */,
+			);
+			name = Sprite;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

@@ -15,7 +15,13 @@
 #include <OpenGL/OpenGL.h>
 #include <GLUT/GLUT.h>
 
-#endif /* defined(__GLSFMLEngine__TextureHandler__) */
+/*
+===============================================================================
+ Texture Handler
+ Creates a texture context from file and returns associated Texture ID Number For use by object
+ 
+===============================================================================
+ */
 
 class TextureHandler {
 
@@ -24,11 +30,9 @@ public:
     int Load( const std::string& filename );
     
 private:
-    sf::Image bufferImage;
-    sf::Image image[1024];
-    
     int totalImages;
     
-    int LoadImage( const std::string& filename );
+    int LoadImage( const std::string& filename , sf::Image* bufferImage );
 };
 
+#endif /* defined(__GLSFMLEngine__TextureHandler__) */
