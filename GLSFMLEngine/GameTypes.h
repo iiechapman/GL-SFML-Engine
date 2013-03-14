@@ -37,12 +37,15 @@ typedef struct buttons_s{
     bool jdown;
     bool jleft;
     bool jright;
+    bool jbutton1;
+    bool jbutton2;
     bool plus;
     bool minus;
     bool space;
     bool rbracket;
     bool lbracket;
     bool escape;
+    bool shift;
     bool a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z;
 } buttons_t;
 

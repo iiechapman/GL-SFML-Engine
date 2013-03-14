@@ -31,10 +31,17 @@ class Sprite {
     ~Sprite();
     
     bool isAnimated;
+    bool isFalling;
+    bool isStopped;
+    bool isStopping;
+
     
     void Update(float deltaTime);
     
     void SetVelocity(vector2d_t newVelocity);
+    void SetMaxVelocity(vector2d_t newMaxVelocity);
+    void SetMinVelocity(vector2d_t newMinVelocity);
+    vector2d_t GetVelocity();
     void SetGravity(vector2d_t newGravity);
     void SetFriction(vector2d_t newFriction);
     void SetAcceleration(vector2d_t newAcceleration);
@@ -66,6 +73,7 @@ class Sprite {
     //Physics
     vector2d_t velocity;
     vector2d_t maxVelocity;
+    vector2d_t minVelocity;
     
     vector2d_t acceleration;
     

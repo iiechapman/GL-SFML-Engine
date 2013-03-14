@@ -4,11 +4,14 @@
 #include <OpenGL/OpenGL.h>
 #include <GLUT/GLUT.h>
 #include <iostream>
+#include <cmath>
+
 #include "TextureHandler.h"
 #include "GameTypes.h"
 #include "Sprite.h"
 #include "KeyCodes.h"
 #include "Input.h"
+
 
 /*
  * Basic OpenGL 2d mario engine
@@ -21,6 +24,7 @@ Sprite* marioSprite;
 Sprite* testSprite;
 
 vector2d_t tempVec;
+vector2d_t secondVec;
 
 const int MAX_FPS = 60;
 bool PLAYMUSIC = true;
@@ -98,10 +102,7 @@ void CalculateDrawTime();
 
 int main ( int argc,char ** argv ) {
     Init();
-    
     soundPlayer.setBuffer(startSound);
-    
-    
     //Create opengl context
     std::cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
@@ -153,7 +154,9 @@ void Idle() {
     
     //if escaped
     if ( pressed.escape ) {
-        glutLeaveGameMode();
+        if ( FULLSCREEN ) {
+            glutLeaveGameMode();
+        }
         soundPlayer.setBuffer(hurtSound);
         soundPlayer.play();
         titleSong.stop();
@@ -161,34 +164,50 @@ void Idle() {
         std::cout << "Exit \n";
     }
     
+    if (pressed.shift || pressed.jbutton1) {
+        secondVec.x = 2.0f;
+        sprite[1]->SetMaxVelocity(secondVec);
+        secondVec.x = -2.0f;
+        sprite[1]->SetMinVelocity(secondVec);
+        sprite[1]->SetAnimationDelay(.02f);
+    } else {
+        secondVec.x = 1.0f;
+        sprite[1]->SetMaxVelocity(secondVec);
+        secondVec.x = -1.0f;
+        sprite[1]->SetMinVelocity(secondVec);
+        sprite[1]->SetAnimationDelay(.05f);
+    }
+    
     //if pressed up
     if ( pressed.kup || pressed.jup) {
-
-        tempVec.y = 0.9f;
+        //tempVec.y = 0.9f;
+        sprite[1]->isStopped = false;
         
     } else if( pressed.kdown || pressed.jdown) {
-        tempVec.y = -0.9f;
+        //tempVec.y = -0.9f;
+        sprite[1]->isStopped = false;
         
     } else {
         tempVec.y = 0.0f;
     }
     
     if ( pressed.kleft || pressed.jleft ) {
-        tempVec.x = -1.0f;
+        tempVec.x = -0.13f;
         sprite[1]->isAnimated = true;
         sprite[1]->SetAnimation(0);
+        sprite[1]->isStopping = false;
 
     } else if( pressed.kright || pressed.jright) {
-        tempVec.x = 1.0f;
+        tempVec.x = 0.13f;
         sprite[1]->isAnimated = true;
         sprite[1]->SetAnimation(1);
+        sprite[1]->isStopping = false;
     } else {
         tempVec.x = 0.0f;
-        sprite[1]->StopAnimation();
-        
-    }
-    
-    sprite[1]->SetVelocity(tempVec);
+        sprite[1]->isStopping = true;
+    } 
+
+    sprite[1]->SetAcceleration( tempVec );
 
     
     //Rotate camera using WASD and parentheses
@@ -367,10 +386,16 @@ void Debug() {
     marioSprite->AddFrame("marioright.png", 1);
     marioSprite->AddFrame("marioright2.png", 1);
     marioSprite->AddFrame("marioright3.png", 1);
-
+    vector2d_t tVec;
+    tVec.x = 0.04f;
+    marioSprite->SetFriction(tVec);
+    tVec.x = 1.2f;
+    marioSprite->SetMaxVelocity(tVec);
+    tVec.x = -1.2f;
+    marioSprite->SetMinVelocity(tVec);
+    marioSprite->SetAnimation(1);
+    marioSprite->StopAnimation();
     sprite.push_back(marioSprite);
-    
-    
     marioSprite = 0;
     
     marioSprite = new Sprite();

@@ -17,12 +17,24 @@ Sprite::Sprite() {
     //Just used for testing
     isLooping = true;
     isAnimated = true;
+    isStopped = true;
+    isStopping = true;
     animationDelay = .50f;
     currentFrameIndex = 0;
+    acceleration.x = 0;
+    acceleration.y = 0;
+    friction.x  = 0.0f;
+    friction.y = 0.0f ;
+    
+    maxVelocity.x = 0.0f;
+    maxVelocity.y = 0.0f;
+    
+    minVelocity.x = -0.0f;
+    minVelocity.y = -0.0f;
+    
     
     R=G=B= 1.5f;
 }
-
 
 Sprite::~Sprite() {
    
@@ -142,6 +154,7 @@ void Sprite::Animate(float deltaTime) {
 void Sprite::StopAnimation() {
     isAnimated = false;
     currentFrameIndex = 0;
+    isStopped = true;
     Animate(0);
 }
 
@@ -167,6 +180,40 @@ void Sprite::SetSize(float x, float y, float z) {
 //--------------------------
 
 void Sprite::Update(float deltaTime) {
+    velocity.x += acceleration.x;
+    velocity.y += acceleration.y;
+    
+    if ( isStopping ) {
+        if ( velocity.x > 0 ) {
+        velocity.x -= friction.x;
+            if ( velocity.x <= 0 ) {
+                velocity.x = 0;
+                StopAnimation();
+            }
+        } else if ( velocity.x < 0 ) {
+           velocity.x += friction.x;
+            if ( velocity.x >= 0 ) {
+                velocity.x = 0;
+                StopAnimation();
+            }
+        }
+        
+        
+        velocity.y = 0;
+    }
+
+    
+    //Floor max and min vector
+    if ( velocity.x > maxVelocity.x ) {
+        velocity.x = maxVelocity.x;
+    }
+    
+    if ( velocity.x < minVelocity.x ) {
+        velocity.x = minVelocity.x;
+    }
+
+    
+    //Final Movement Vector
     position.x += (velocity.x) * deltaTime;
     position.y += (velocity.y) * deltaTime;
 }
@@ -175,12 +222,25 @@ void Sprite::SetVelocity(vector2d_t newVelocity) {
     velocity = newVelocity;
 }
 
+void Sprite::SetMaxVelocity(vector2d_t newMaxVelocity) {
+    maxVelocity = newMaxVelocity;
+}
 
+void Sprite::SetMinVelocity(vector2d_t newMinVelocity) {
+    minVelocity = newMinVelocity;
+}
 
+void Sprite::SetAcceleration(vector2d_t newAcceleration) {
+    acceleration = newAcceleration;
+}
 
+void Sprite::SetFriction(vector2d_t newFriction) {
+    friction = newFriction;
+}
 
-
-
+vector2d_t Sprite::GetVelocity() {
+    return velocity;
+}
 
 
 

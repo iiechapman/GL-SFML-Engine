@@ -14,7 +14,7 @@
 buttons_t pressed;
 
 void Keyboard( unsigned char key,int x, int y ) {
-    //std::cout << "Key: " << key << "\n";
+    std::cout << "Key: " << key << "\n";
     switch ( key ) {
         case '=':
             pressed.plus = true;
@@ -50,6 +50,9 @@ void Keyboard( unsigned char key,int x, int y ) {
             
         default:
             break;
+    }
+    if ( glutGetModifiers() == GLUT_ACTIVE_SHIFT ) {
+        pressed.shift = true;
     }
 }
 
@@ -122,6 +125,9 @@ void SpecialKey( int key, int x, int y ) {
         default:
             break;
     }
+    if ( glutGetModifiers() == GLUT_ACTIVE_SHIFT ) {
+        pressed.shift = true;
+    }
 }
 
 void SpecialKeyUp( int key, int x, int y ) {
@@ -144,6 +150,9 @@ void SpecialKeyUp( int key, int x, int y ) {
             
         default:
             break;
+    }
+    if ( glutGetModifiers() == GLUT_ACTIVE_SHIFT ) {
+        pressed.shift = false;
     }
 }
 
@@ -179,7 +188,13 @@ void Joystick(unsigned int buttonMask,int x, int y, int z) {
         pressed.jup = false;
     }
     
-    //std::cout << "Joy: " << buttonMask << "\n";
+    if ( buttonMask == 8 ) {
+        pressed.jbutton1 = true;
+    } else {
+        pressed.jbutton1 = false;
+    }
+    
+    std::cout << "Joy: " << buttonMask << "\n";
 }
 
 
