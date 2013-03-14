@@ -7,6 +7,8 @@
 #include "TextureHandler.h"
 #include "GameTypes.h"
 #include "Sprite.h"
+#include "KeyCodes.h"
+#include "Input.h"
 
 /*
  * Basic OpenGL 2d mario engine
@@ -14,16 +16,24 @@
  */
 
 //Debug header
+vector<Sprite*> sprite;
 Sprite* marioSprite;
+Sprite* testSprite;
 
-bool PLAYMUSIC = false;
+vector2d_t tempVec;
+
+const int MAX_FPS = 60;
+bool PLAYMUSIC = true;
+bool DEPTH_ENABLED = false;
+bool FULLSCREEN = true;
 bool running;
 bool falling;
 bool jumping;
 bool stopped;
 
 //button and sprite variables
-buttons_t       pressed;
+//buttons_t       pressed;
+
 dimensions_t    position;
 dimensions_t    deltaPosition;
 dimensions_t    size;
@@ -39,7 +49,6 @@ float animTick          = 0.068f;
 float animDelta         = 0.0f;
 float animLastTime      = 0.0f;
 
-
 direction_t marioDirection;
 range_t     marioAnim;
 
@@ -50,6 +59,8 @@ float   delta       = .0025f;
 float   lastTime    =   0.0f;
 float   curTime     =   0.0f;
 float   deltaTime   =   0.0f;
+float   timeOfLastDraw    = 0.0f;
+float   deltaDraw         = 0.0f;
 
 int     FPS;
 int     framesPerSecond;
@@ -62,14 +73,12 @@ range_t rightAnim;
 range_t stoppedright;
 range_t stoppedleft;
 
-int curFrame;
 
-GLuint textureID = 0;
-
-sf::Image textures[20];
-sf::Image tile[20];
 sf::Music titleSong;
-TextureHandler* TexHandler;
+sf::SoundBuffer hurtSound;
+sf::SoundBuffer startSound;
+sf::Sound soundPlayer;
+
 
 void Init();
 void Display();
@@ -78,7 +87,6 @@ void Keyboard( unsigned char key,int x, int y );
 void KeyboardUp( unsigned char key, int x, int y );
 void SpecialKey( int key, int x ,int y );
 void SpecialKeyUp( int key,int x ,int y );
-void TextureLoad();
 void SpriteState();
 void SetScene();
 void Animate();
@@ -86,22 +94,27 @@ void CalculateFPS();
 void Timer();
 void Idle();
 void Debug();
+void CalculateDrawTime();
 
 int main ( int argc,char ** argv ) {
     Init();
     
-    //Play music
-    if (PLAYMUSIC){
-    titleSong.play();
-    }
+    soundPlayer.setBuffer(startSound);
+    
     
     //Create opengl context
     std::cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
-    glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB );
+    glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowPosition( 900, 300 );
-    glutInitWindowSize( 640, 480 );
-    glutCreateWindow( "Texture Opengl Test" );
+    glutInitWindowSize( 512, 448 );
+    glutGameModeString("512x448:32");
+    soundPlayer.play();
+    if ( !FULLSCREEN ) {
+        glutCreateWindow( "Opengl 2D Engine  V1.0" );
+    } else {
+        glutEnterGameMode();
+    }
     glClearColor( 0.0f, 0.37f, 0.71f, 0.0f );
     glutDisplayFunc( Display );
     glutReshapeFunc( Reshape );
@@ -110,107 +123,73 @@ int main ( int argc,char ** argv ) {
     glutKeyboardUpFunc( KeyboardUp );
     glutSpecialFunc( SpecialKey );
     glutSpecialUpFunc( SpecialKeyUp );
+    glutJoystickFunc(Joystick,1);
     //Created opengl Context
+    
+    //Play music
+    if (PLAYMUSIC){
+        titleSong.play();
+    }
     
     Debug();
 
-    
-   // TextureLoad();
     displayList = glGenLists( 1 );
     
     glutMainLoop();
     
-    glDeleteTextures( 5, &textureID );
+    for (vector<Sprite*>::iterator i = sprite.begin() ; i < sprite.end() ; i++ ) {
+        delete (*i);
+        (*i) = 0;
+    }
+    
+    testSprite = 0;
+    marioSprite = 0;
     
 	return EXIT_SUCCESS;
 }
 
-void Idle() {  
-    if ( pressed.kup ) {
-        deltaPosition.y = delta*2;
-        falling = false;
-        jumping = true;
-    } else if( pressed.kdown ) {
-        deltaPosition.y = -delta;
-    } else {
-        deltaPosition.y = 0.0f;
+void Idle() {
+    glutForceJoystickFunc();
+    
+    //if escaped
+    if ( pressed.escape ) {
+        glutLeaveGameMode();
+        soundPlayer.setBuffer(hurtSound);
+        soundPlayer.play();
+        titleSong.stop();
+        exit(0);
+        std::cout << "Exit \n";
     }
     
-    if ( pressed.kleft ) {
-        marioDirection = leftd;
-        marioAnim = leftAnim;
-        running = true;
-        stopped = false;
-        deltaPosition.x = -delta;
+    //if pressed up
+    if ( pressed.kup || pressed.jup) {
 
-    } else if( pressed.kright ) {
-        marioDirection = rightd;
-        marioAnim = rightAnim;
-        running = true;
-        stopped = false;
+        tempVec.y = 0.9f;
         
-        deltaPosition.x = delta;
+    } else if( pressed.kdown || pressed.jdown) {
+        tempVec.y = -0.9f;
+        
     } else {
-        running = false;
-        stopped = true;
-        deltaPosition.x = 0.0f;
+        tempVec.y = 0.0f;
     }
     
-    
-    if ( pressed.plus ) {
-        deltaPosition.z = -delta;
-    } else if(pressed.minus) {
-        deltaPosition.z = delta;
-    } else {
-        deltaPosition.z = 0.0f;
-    }
-    
-    if ( jumping || falling ) {
-        switch ( marioDirection ) {
-                case leftd:
-                marioAnim = jumpleft;
-                break;
-                
-            case rightd:
-                marioAnim = jumpright;
-                break;
-                
-            default:
-                break;
-        }
-    }
-    
-    //if player hits bottom of screen , move down
-    if ( position.y > -.600 && !jumping ) {
-        deltaPosition.y = -delta;
-        falling = true;
-    } else {
-        jumping = false;
-        falling = false;
-    }
-    
-    if ( stopped && !falling && !jumping ) {
-        switch ( marioDirection ) {
-            case leftd:
-                marioAnim = stoppedleft;
-                break;
-                
-            case rightd:
-                marioAnim = stoppedright;
-                break;
-                
-            default:
-                break;
-        }
-    }
+    if ( pressed.kleft || pressed.jleft ) {
+        tempVec.x = -1.0f;
+        sprite[1]->isAnimated = true;
+        sprite[1]->SetAnimation(0);
 
-    position.x += deltaPosition.x;
-    position.y += deltaPosition.y;
-    position.z += deltaPosition.z;
+    } else if( pressed.kright || pressed.jright) {
+        tempVec.x = 1.0f;
+        sprite[1]->isAnimated = true;
+        sprite[1]->SetAnimation(1);
+    } else {
+        tempVec.x = 0.0f;
+        sprite[1]->StopAnimation();
+        
+    }
     
-//    std::cout   << "x: " << position.x
-//                << " y: " << position.y
-//                << " z: " << position.z << "\n";
+    sprite[1]->SetVelocity(tempVec);
+
     
     //Rotate camera using WASD and parentheses
     if ( pressed.rbracket ) {
@@ -237,228 +216,43 @@ void Idle() {
         glRotatef(1, 0.0f,delta/1000, 0.0f);
     }
     
+    for (vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; ++i ){
+        (*i)->Update(deltaDraw);
+    }
+    
     Animate();
+    
     SetScene();
     
     CalculateFPS();
     glutPostRedisplay();
+    CalculateDrawTime();
 }
 
 void Init(){
     // Load a song to play
-    if ( !titleSong.openFromFile( "cielastheme.ogg" ) ) {
+    if ( !titleSong.openFromFile( "overworld.ogg" ) ) {
         std::cout << "Failed to load song...\n";
     }
     
-    leftAnim.start  = 0;
-    leftAnim.end    = 2;
+    if ( !hurtSound.loadFromFile("hurt.wav")) {
+        std::cout << "Failed to load sound ... \n";
+    }
     
-    rightAnim.start = 3;
-    rightAnim.end   = 5;
+    if (!startSound.loadFromFile("start.wav")) {
+        std::cout << "Failed to load sound... \n";
+    }
     
-    jumpleft.start  = 6;
-    jumpleft.end    = 6;
-    
-    jumpright.start = 7;
-    jumpright.end   = 7;
-    
-    stoppedleft.start   = 0;
-    stoppedleft.end     = 0;
-    
-    stoppedright.start  = 3;
-    stoppedright.end    = 3;
-    
-    position.x = 0;
-    position.y = 0;
-    
-    tilePos.x = -.50;
-    tilePos.y = -0.802;
-    
-    deltaPosition.x = 0.0f;
-    deltaPosition.y = 0.0f;
-    
-    size.x = .15f;
-    size.y = .2f;
-    
-    tileSize.x = 1.09f;
-    tileSize.y = .13f;
-    
-    marioDirection = rightd;
-    marioAnim      = rightAnim;
-    
-    running = false;
-    jumping = false;
 }
 
-void TextureLoad(){
-    GLsizei x,y ;
-    
-    //load mario character texture files
-    if ( !textures[0].loadFromFile( "marioleft.png" ) ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    if ( !textures[1].loadFromFile( "marioleft2.png") ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    if ( !textures[2].loadFromFile( "marioleft3.png") ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    if (!textures[3].loadFromFile( "marioright.png" ) ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-
-    if (!textures[4].loadFromFile( "marioright2.png" ) ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    if ( !textures[5].loadFromFile( "marioright3.png" ) ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    if ( !textures[6].loadFromFile( "mariojumpleft.png" ) ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    if ( !textures[7].loadFromFile( "mariojumpright.png" ) ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    if ( !tile[0].loadFromFile( "tile1.png" ) ) {
-        std::cout << "Failed to load texture...\n";
-    } else {
-        std::cout << "Loaded texture...\n";
-    }
-    
-    //Set up texture 0
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-    
-    glBindTexture( GL_TEXTURE_2D, 0 );
-    glTexImage2D(
-                 GL_TEXTURE_2D, 0,
-                 GL_RGBA, x, y, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE,
-                 textures[0].getPixelsPtr()
-                 );
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup texture 1
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-    
-    glBindTexture(GL_TEXTURE_2D, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures[1].getPixelsPtr());
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup texture 2
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-   
-    glBindTexture(GL_TEXTURE_2D, 2);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures[2].getPixelsPtr());
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup texture 3
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-    
-    glBindTexture(GL_TEXTURE_2D, 3);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures[3].getPixelsPtr());
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup texture 4
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-    
-    glBindTexture(GL_TEXTURE_2D, 4);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures[4].getPixelsPtr());
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup texture 5
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-    
-    glBindTexture(GL_TEXTURE_2D, 5);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures[5].getPixelsPtr());
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup texture 6
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-    
-    glBindTexture(GL_TEXTURE_2D, 6);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures[6].getPixelsPtr());
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup texture 7
-    x = textures[0].getSize().x;
-    y = textures[0].getSize().y;
-    
-    glBindTexture(GL_TEXTURE_2D, 7);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, textures[7].getPixelsPtr());
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-    
-    //setup tile texture
-    x = tile[0].getSize().x;
-    y = tile[0].getSize().y;
-    
-    glBindTexture(GL_TEXTURE_2D, 8);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, tile[0].getPixelsPtr());
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
-}
 
 void Display() {
     glClear( GL_COLOR_BUFFER_BIT );
-    
-    glCallList( displayList );
 
+    glCallList( displayList );
+    
     glutSwapBuffers();
+    timeOfLastDraw = glutGet( GLUT_ELAPSED_TIME ) * .001;
     totalFramesRendered++;
 }
 
@@ -468,135 +262,6 @@ void Reshape(int w, int h) {
     glOrtho( 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 );
 }
 
-void Keyboard( unsigned char key,int x, int y ) {
-    //std::cout << "Key: " << key << "\n";
-    switch ( key ) {
-        case '=':
-            pressed.plus = true;
-            break;
-            
-        case '-':
-            pressed.minus = true;
-            break;
-            
-        case ']':
-            pressed.rbracket = true;
-            break;
-            
-        case '[':
-            pressed.lbracket = true;
-            break;
-
-        case 'w':
-            pressed.w = true;
-            break;
-            
-        case 'a':
-            pressed.a = true;
-            break;
-            
-        case 's':
-            pressed.s = true;
-            break;
-            
-        case 'd':
-            pressed.d = true;
-            break;
-            
-        default:
-            break;
-    }
-}
-
-void KeyboardUp( unsigned char key, int x, int y ) {
-    switch ( key ) {
-        case '=':
-            pressed.plus = false;
-            break;
-            
-        case '-':
-            pressed.minus = false;
-            break;
-            
-        case ']':
-            pressed.rbracket = false;
-            break;
-            
-        case '[':
-            pressed.lbracket = false;
-            break;
-            
-        case 'w':
-            pressed.w = false;
-            break;
-            
-        case 'a':
-            pressed.a = false;
-            break;
-            
-        case 's':
-            pressed.s = false;
-            break;
-            
-        case 'd':
-            pressed.d = false;
-            break;
-    }
-}
-
-void SpecialKey( int key, int x, int y ) {
-    /*
-     Special Key codes:
-     Up     = 101
-     Down   = 103
-     Left   = 100
-     Right  = 102
-    */
-    //std::cout << "Special Key: " << key << "\n";
-    switch ( key ) {
-        case 101:
-            pressed.kup = true;
-            break;
-            
-        case 103:
-            pressed.kdown = true;
-            break;
-            
-        case 100:
-            pressed.kleft = true;
-            break;
-            
-        case 102:
-            pressed.kright = true;
-            break;
-            
-        default:
-            break;
-    }
-}
-
-void SpecialKeyUp( int key, int x, int y ) {
-    switch ( key ) {
-        case 101:
-            pressed.kup = false;
-            break;
-            
-        case 103:
-            pressed.kdown = false;
-            break;
-            
-        case 100:
-            pressed.kleft = false;
-            break;
-            
-        case 102:
-            pressed.kright = false;
-            break;
-            
-        default:
-            break;
-    }
-}
 
 void SetScene() {
     glNewList( displayList, GL_COMPILE );
@@ -604,71 +269,48 @@ void SetScene() {
     //set line drawing width for axes
     glLineWidth( 1 );
     
+    
+    glColor3f( 0.1f, 0.2f, 1.0f );
+    glutWireTeapot( 0.5f );
+    
+    //TERRIBLE 60 frame cap code
+    glutWireSphere( 0.5f, 200, 200 );
+    
     //start textured drawing
     glEnable( GL_TEXTURE_2D );
     glEnable( GL_BLEND );
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     
     //Start Debug Drawing
-    marioSprite->Draw();
-    
-    //start player drawing
-    glBindTexture( GL_TEXTURE_2D, curFrame );
-    
-    glBegin(GL_QUADS);
-    glColor3f( 1.0f, 1.0f, 1.0f );
-    glTexCoord2f( 0, 0 );
-    glVertex3f( position.x, position.y,position.z );//bl
-    glTexCoord2f( 1, 0 );
-    glVertex3f( position.x + size.x, position.y,position.z );//br
-    glTexCoord2f( 1, 1 );
-    glVertex3f( position.x + size.x, position.y - size.y,position.z );//tr
-    glTexCoord2f( 0, 1 );
-    glVertex3f( position.x, position.y - size.y,position.z );//tl
-    glEnd();
-    
-    //start tile drawing
-    
-    glBindTexture(GL_TEXTURE_2D, 8);
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0, 0);
-    glVertex3f(tilePos.x, tilePos.y,tilePos.z);//bl
-    glTexCoord2f(1, 0);
-    glVertex3f(tilePos.x + tileSize.x, tilePos.y,tilePos.z);//br
-    glTexCoord2f(1, 1);
-    glVertex3f(tilePos.x + tileSize.x, tilePos.y - tileSize.y,tilePos.z);//tr
-    glTexCoord2f(0, 1);
-    glVertex3f(tilePos.x, tilePos.y - tileSize.y,tilePos.z);//tl
-    glEnd();
+    for ( std::vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; ++i ) {
+        (*i)->Draw();
+    }
     
     glDisable( GL_TEXTURE_2D );
     glDisable( GL_BLEND );
+
+    if ( DEPTH_ENABLED ) {
+        //Set line width for axes
+        glLineWidth( 4 );
+        glBegin( GL_LINES );
     
-    glColor3f( 0.5f, 0.2f, 1.0f );
-    glutWireTeapot( 0.5f );
-    
-    glutWireSphere( 0.1f, 20, 20 );
-    
-    glLineWidth( 4 );
-    glBegin( GL_LINES );
-    
-    //X Coordinate line
-    glColor3f( 1.0f, 0.0f, 0.0f );
-    glVertex3f( 0, 0, 0);
-    glVertex3f( 0.8, 0, 0 );
-    
-    //Y Coordinate line
-    glColor3f( 0.0f, 1.0f, 0.0f );
-    glVertex3f( 0.0f, 0.0f, 0.0f );
-    glVertex3f( 0.0f, 0.8, 0.0 );
-    
-    //Z Coordinate line
-    glColor3f( 0.0f, 0.0f, 1.0f);
-    glVertex3f( 0, 0, 0 );
-    glVertex3f( 0, 0, 0.8 );
-    
-    glEnd();
+        //X Coordinate line
+        glColor3f( 1.0f, 0.0f, 0.0f );
+        glVertex3f( 0, 0, 0);
+        glVertex3f( 0.8, 0, 0 );
+        
+        //Y Coordinate line
+        glColor3f( 0.0f, 1.0f, 0.0f );
+        glVertex3f( 0.0f, 0.0f, 0.0f );
+        glVertex3f( 0.0f, 0.8, 0.0 );
+        
+        //Z Coordinate line
+        glColor3f( 0.0f, 0.0f, 1.0f);
+        glVertex3f( 0, 0, 0 );
+        glVertex3f( 0, 0, 0.8 );
+        
+        glEnd();
+    }
     
     glEndList();
 }
@@ -682,42 +324,71 @@ void CalculateFPS() {
     if ( deltaTime >= 1.0f ) {
         lastTime = curTime;
         FPS = totalFramesRendered;
+        totalFramesRendered = 0;
     }
+}
+
+void CalculateDrawTime() {
+    deltaDraw = glutGet( GLUT_ELAPSED_TIME ) * .001 - timeOfLastDraw;
+    //std::cout << "Draw time: " << deltaDraw << "\n";
 }
 
 void Animate(){
-    //Tick from update here, see what frame, loop if needed
-    animDelta = curTime - animLastTime;
-    //std::cout << "AD = " << curTime << "-" << animLastTime << "=" << curTime - animLastTime << "\n";
-    if ( animDelta >= animTick ) {
-        animLastTime = curTime;
-        if ( running ) {
-            curFrame++;
-        }
-        
-        if ( !running ) {
-            curFrame = marioAnim.start;
-        }
-        
-        //std::cout << "CurFrame: " << curFrame << "\n";
-    }
-    
-    if ( curFrame > marioAnim.end ) {
-        curFrame = marioAnim.start;
-    }
-    
-    if ( curFrame < marioAnim.start ) {
-        curFrame = marioAnim.start;
+    for (vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; ++i ){
+        (*i)->Animate(deltaDraw);
     }
 }
-
 
 void Debug() {
     std::cout << "Debug Section: " << "\n";
     
-    marioSprite = new Sprite();
+    vector<int> blankAnimation;
     
-}
+    testSprite = new Sprite();
+    testSprite->AddAnimation(blankAnimation);
+    testSprite->SetAnimation(0);
+    testSprite->AddFrame("background1.png", 0);
+    testSprite->SetPosition(-1, 1, 0);
+    testSprite->SetSize(2, 2, 0);
+    sprite.push_back(testSprite);
+    
+    marioSprite = new Sprite();
+    marioSprite->SetSize(.23, .25, 0);
+    marioSprite->SetPosition(-0.9f, -0.62f, 0.0f);
+    marioSprite->AddAnimation(blankAnimation);
+    marioSprite->SetAnimation(0);
+    marioSprite->SetAnimationDelay(0.04f);
+    marioSprite->AddAnimation(blankAnimation);
+    marioSprite->SetAnimation(0);
+    marioSprite->AddFrame("marioleft.png", 0);
+    marioSprite->AddFrame("marioleft2.png", 0);
+    marioSprite->AddFrame("marioleft3.png", 0);
+    marioSprite->AddAnimation(blankAnimation);
+    marioSprite->AddFrame("marioright.png", 1);
+    marioSprite->AddFrame("marioright2.png", 1);
+    marioSprite->AddFrame("marioright3.png", 1);
+
+    sprite.push_back(marioSprite);
+    
+    
+    marioSprite = 0;
+    
+    marioSprite = new Sprite();
+    marioSprite->AddAnimation(blankAnimation);
+    marioSprite->SetAnimation(0);
+    marioSprite->SetAnimationDelay(0.07f);
+    marioSprite->AddFrame("block1.png", 0);
+    marioSprite->AddFrame("block2.png", 0);
+    marioSprite->AddFrame("block3.png", 0);
+    marioSprite->AddFrame("block4.png", 0);
+    marioSprite->SetPosition(-.2, -.2, 0);
+    marioSprite->SetSize(.2, .22, 0.0f);
+    
+    sprite.push_back(marioSprite);
+    
+
+    
+    }
 
 
 

@@ -28,13 +28,29 @@ class Sprite {
     public:
     
     Sprite();
+    ~Sprite();
     
-    void Update();
+    bool isAnimated;
+    
+    void Update(float deltaTime);
+    
+    void SetVelocity(vector2d_t newVelocity);
+    void SetGravity(vector2d_t newGravity);
+    void SetFriction(vector2d_t newFriction);
+    void SetAcceleration(vector2d_t newAcceleration);
+    
+    void AddFrame(const std::string& filename , int animationIndex);
     void AddAnimation(vector<int> newAnimation);
+    void SetAnimation(int index);
+    void SetAnimationDelay(float delay);
+    void StopAnimation();
     void RemoveAnimation(int indexToRemove);
-    void Animate();
+    void Animate(float deltaTime);
+    
     void Draw();
-    void SetPosition ( float x,float y );
+    void SetColor(float red, float green, float blue);
+    void SetPosition ( float x,float y ,float z );
+    void SetSize (float x, float y, float z);
     
     private:
     animation_t animation;
@@ -43,7 +59,21 @@ class Sprite {
     int currentAnimation;
     bool isLooping;
     float animationDelay;
+    float animationDelayTotal;
+    
     float R,G,B;
+    
+    //Physics
+    vector2d_t velocity;
+    vector2d_t maxVelocity;
+    
+    vector2d_t acceleration;
+    
+    vector2d_t gravity;
+    vector2d_t maxGravity;
+    
+    vector2d_t friction;
+    vector2d_t maxFriction;
     
     dimensions_t position;
     dimensions_t size;
@@ -53,3 +83,19 @@ class Sprite {
 };
 
 #endif /* defined(__GLSFMLEngine__Sprite__) */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

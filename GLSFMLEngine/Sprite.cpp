@@ -14,17 +14,18 @@
  ===================
  */
 Sprite::Sprite() {
-    currentFrame = texture.Load( "error.png" );
+    //Just used for testing
+    isLooping = true;
+    isAnimated = true;
+    animationDelay = .50f;
+    currentFrameIndex = 0;
     
-    std::cout << "CRFRAME: " << currentFrame << "\n";
-    position.x = -1;
-    position.y = 0;
-    position.z = 0.0f;
-    size.x = 1.0;
-    size.y = 1.4;
-    
-    R=G=B= 1.0f;
-    
+    R=G=B= 1.5f;
+}
+
+
+Sprite::~Sprite() {
+   
 }
 
 /*
@@ -56,6 +57,23 @@ void Sprite::Draw() {
 
 //Animation
 //-----------------------------------------
+
+/*
+ ====================
+ AddFrame
+ Add texture to new frame of animation
+ ====================
+ */
+void Sprite::AddFrame(const std::string& filename, int animationIndex ) {
+    int textureID = texture.Load(filename);
+    if ( textureID == 0 ) {
+        textureID = 1;
+    }
+    animation.index[animationIndex].push_back(textureID);
+}
+
+
+
 /*
  ===============
  AddAnimation
@@ -75,24 +93,95 @@ void Sprite::RemoveAnimation(int indexToRemove) {
 }
 
 /*
+ Set Animation
+ Set animation to index
+ */
+void Sprite::SetAnimation( int index ) {
+    currentAnimation = index;
+}
+
+/*
+ ================
+ Set animation delay
+ Set the delay between frame changes
+ ================
+ */
+void Sprite::SetAnimationDelay( float delay ) {
+    animationDelay = delay;
+}
+
+/*
  ==========================
  Animate
- Advance frame, if frame is beyond boundaries of current animation, loop animation if animation is looped
+ Advance frame, if frame is beyond boundaries
+ of current animation, loop animation if animation is looped
  ==========================
  */
-void Sprite::Animate() {
-    currentFrameIndex++;
-    long lastFrame = animation.index[currentAnimation].size();
+void Sprite::Animate(float deltaTime) {
+    animationDelayTotal += deltaTime;
     
+    if ( animationDelayTotal >= animationDelay && isAnimated ) {
+        animationDelayTotal = 0;
+        currentFrameIndex++;
+    }
+    
+    long lastFrame = animation.index[currentAnimation].size()-1;
+    
+    //if the current frame is outside the last frame 
     if (currentFrameIndex > lastFrame) {
         if ( isLooping ) {
-            currentFrame = animation.index[currentAnimation][0];
             currentFrameIndex = 0;
         } else {
-            currentFrame = (int)lastFrame;
+            currentFrameIndex = (int)lastFrame ;
         }
     }
+    //Current frame of animation is index selected in current animation
+    currentFrame = animation.index[currentAnimation][currentFrameIndex];
 }
+
+void Sprite::StopAnimation() {
+    isAnimated = false;
+    currentFrameIndex = 0;
+    Animate(0);
+}
+
+//Dimensions
+//-----------------------------
+void Sprite::SetPosition(float x, float y, float z) {
+    position.x = x;
+    position.y = y;
+    position.z = z;
+}
+
+
+void Sprite::SetSize(float x, float y, float z) {
+    size.x = x;
+    size.y = y;
+    size.z = z;
+}
+
+
+
+
+//Updates + Physics
+//--------------------------
+
+void Sprite::Update(float deltaTime) {
+    position.x += (velocity.x) * deltaTime;
+    position.y += (velocity.y) * deltaTime;
+}
+
+void Sprite::SetVelocity(vector2d_t newVelocity) {
+    velocity = newVelocity;
+}
+
+
+
+
+
+
+
+
 
 
 

@@ -17,6 +17,7 @@
 TextureHandler::TextureHandler() {
     sf::Image bufferImage;
     LoadImage( "error.png" ,&bufferImage );
+    std::cout << "Loaded default texture  \n";
 }
 /*
  =======================
@@ -32,7 +33,7 @@ int TextureHandler::Load( const std::string& filename ) {
     currentTextureID = LoadImage( filename,&bufferImage );
     //If load image fails, return 0
     if ( currentTextureID == 0 ) {
-        return 0;
+        return 1;
     }
     
     int x = bufferImage.getSize().x;
@@ -49,7 +50,7 @@ int TextureHandler::Load( const std::string& filename ) {
     glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
 
     //Return texture ID used
-    std::cout << "CRframe used " << currentTextureID << "\n";
+    //std::cout << "CRframe used " << currentTextureID << "\n";
     return currentTextureID;
 }
 
@@ -76,3 +77,9 @@ int TextureHandler::LoadImage( const std::string& filename , sf::Image* bufferIm
     std::cout << "Tex id " << textureID << "\n";
     return textureID;
 }
+
+TextureHandler::~TextureHandler() {
+    
+}
+
+

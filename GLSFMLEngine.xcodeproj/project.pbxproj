@@ -16,6 +16,7 @@
 		4E64DDB916DE9F000027065F /* sfml-system.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4E64DDB316DE9F000027065F /* sfml-system.framework */; };
 		4E64DDBA16DE9F000027065F /* sfml-window.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4E64DDB416DE9F000027065F /* sfml-window.framework */; };
 		4E64DDBB16DE9F000027065F /* SFML.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4E64DDB516DE9F000027065F /* SFML.framework */; };
+		4EA1F20E16F138F20046C5A9 /* Input.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EA1F20C16F138F20046C5A9 /* Input.cpp */; };
 		4EC167BF16ECDB1D00ADEE26 /* TextureHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */; };
 		4EC167C216ECF25700ADEE26 /* Sprite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EC167C016ECF25700ADEE26 /* Sprite.cpp */; };
 /* End PBXBuildFile section */
@@ -23,9 +24,6 @@
 /* Begin PBXFileReference section */
 		4E64DD9A16DD3C250027065F /* GLSFMLEngine */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = GLSFMLEngine; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E64DD9D16DD3C250027065F /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		4E64DDA016DD3C250027065F /* sansation.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = sansation.ttf; sourceTree = "<group>"; };
-		4E64DDA116DD3C250027065F /* cute_image.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = cute_image.jpg; sourceTree = "<group>"; };
-		4E64DDA216DD3C250027065F /* nice_music.ogg */ = {isa = PBXFileReference; lastKnownFileType = file; path = nice_music.ogg; sourceTree = "<group>"; };
 		4E64DDAC16DD81AF0027065F /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		4E64DDAE16DD81B40027065F /* GLUT.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLUT.framework; path = System/Library/Frameworks/GLUT.framework; sourceTree = SDKROOT; };
 		4E64DDB016DE9F000027065F /* sfml-audio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "sfml-audio.framework"; path = "../../../../../../Library/Frameworks/sfml-audio.framework"; sourceTree = "<group>"; };
@@ -34,6 +32,9 @@
 		4E64DDB316DE9F000027065F /* sfml-system.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "sfml-system.framework"; path = "../../../../../../Library/Frameworks/sfml-system.framework"; sourceTree = "<group>"; };
 		4E64DDB416DE9F000027065F /* sfml-window.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "sfml-window.framework"; path = "../../../../../../Library/Frameworks/sfml-window.framework"; sourceTree = "<group>"; };
 		4E64DDB516DE9F000027065F /* SFML.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SFML.framework; path = ../../../../../../Library/Frameworks/SFML.framework; sourceTree = "<group>"; };
+		4EA1F20A16F134560046C5A9 /* KeyCodes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KeyCodes.h; sourceTree = "<group>"; };
+		4EA1F20C16F138F20046C5A9 /* Input.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Input.cpp; sourceTree = "<group>"; };
+		4EA1F20D16F138F20046C5A9 /* Input.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Input.h; sourceTree = "<group>"; };
 		4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TextureHandler.cpp; sourceTree = "<group>"; };
 		4EC167BE16ECDB1D00ADEE26 /* TextureHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TextureHandler.h; sourceTree = "<group>"; };
 		4EC167C016ECF25700ADEE26 /* Sprite.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Sprite.cpp; sourceTree = "<group>"; };
@@ -87,22 +88,22 @@
 		4E64DD9C16DD3C250027065F /* GLSFMLEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4EA1F20B16F138B70046C5A9 /* Input */,
+				4EEB516C16F1159F0053EB4F /* Support */,
 				4EEB516B16EFFE1B0053EB4F /* Sprite */,
 				4E64DD9D16DD3C250027065F /* main.cpp */,
-				4EC167C416ECF3DE00ADEE26 /* GameTypes.h */,
-				4E64DD9F16DD3C250027065F /* Supporting Files */,
 			);
 			path = GLSFMLEngine;
 			sourceTree = "<group>";
 		};
-		4E64DD9F16DD3C250027065F /* Supporting Files */ = {
+		4EA1F20B16F138B70046C5A9 /* Input */ = {
 			isa = PBXGroup;
 			children = (
-				4E64DDA016DD3C250027065F /* sansation.ttf */,
-				4E64DDA116DD3C250027065F /* cute_image.jpg */,
-				4E64DDA216DD3C250027065F /* nice_music.ogg */,
+				4EA1F20A16F134560046C5A9 /* KeyCodes.h */,
+				4EA1F20C16F138F20046C5A9 /* Input.cpp */,
+				4EA1F20D16F138F20046C5A9 /* Input.h */,
 			);
-			name = "Supporting Files";
+			name = Input;
 			sourceTree = "<group>";
 		};
 		4EEB516B16EFFE1B0053EB4F /* Sprite */ = {
@@ -114,6 +115,14 @@
 				4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */,
 			);
 			name = Sprite;
+			sourceTree = "<group>";
+		};
+		4EEB516C16F1159F0053EB4F /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				4EC167C416ECF3DE00ADEE26 /* GameTypes.h */,
+			);
+			name = Support;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -169,6 +178,7 @@
 				4E64DD9E16DD3C250027065F /* main.cpp in Sources */,
 				4EC167BF16ECDB1D00ADEE26 /* TextureHandler.cpp in Sources */,
 				4EC167C216ECF25700ADEE26 /* Sprite.cpp in Sources */,
+				4EA1F20E16F138F20046C5A9 /* Input.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

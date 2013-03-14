@@ -33,12 +33,22 @@ typedef struct buttons_s{
     bool kdown;
     bool kright;
     bool kleft;
+    bool jup;
+    bool jdown;
+    bool jleft;
+    bool jright;
     bool plus;
     bool minus;
     bool space;
     bool rbracket;
     bool lbracket;
+    bool escape;
     bool a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z;
 } buttons_t;
+
+typedef struct vector2d_s {
+    float x;
+    float y;
+} vector2d_t;
 
 #endif /* defined(__GLSFMLEngine__GameTypes__) */

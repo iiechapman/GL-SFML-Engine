@@ -27,6 +27,7 @@ class TextureHandler {
 
 public:
     TextureHandler();
+    ~TextureHandler();
     int Load( const std::string& filename );
     
 private:
