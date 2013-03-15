@@ -16,6 +16,10 @@ buttons_t pressed;
 void Keyboard( unsigned char key,int x, int y ) {
     std::cout << "Key: " << key << "\n";
     switch ( key ) {
+        case kesc:
+            pressed.escape = true;
+            break;
+            
         case '=':
             pressed.plus = true;
             break;
@@ -48,6 +52,14 @@ void Keyboard( unsigned char key,int x, int y ) {
             pressed.d = true;
             break;
             
+        case 'z':
+            pressed.z = true;
+            break;
+            
+        case 'x':
+            pressed.x = true;
+            break;
+            
         default:
             break;
     }
@@ -58,6 +70,10 @@ void Keyboard( unsigned char key,int x, int y ) {
 
 void KeyboardUp( unsigned char key, int x, int y ) {
     switch ( key ) {
+        case kesc:
+            pressed.escape = false;
+            break;
+            
         case '=':
             pressed.plus = false;
             break;
@@ -90,9 +106,14 @@ void KeyboardUp( unsigned char key, int x, int y ) {
             pressed.d = false;
             break;
             
-        case kesc:
-            pressed.escape = true;
+        case 'z':
+            pressed.z = false;
             break;
+            
+        case 'x':
+            pressed.x = false;
+            break;
+            
     }
 }
 
@@ -127,6 +148,8 @@ void SpecialKey( int key, int x, int y ) {
     }
     if ( glutGetModifiers() == GLUT_ACTIVE_SHIFT ) {
         pressed.shift = true;
+    } else {
+        pressed.shift = false;
     }
 }
 
@@ -152,6 +175,8 @@ void SpecialKeyUp( int key, int x, int y ) {
             break;
     }
     if ( glutGetModifiers() == GLUT_ACTIVE_SHIFT ) {
+        pressed.shift = true;
+    } else {
         pressed.shift = false;
     }
 }
@@ -194,7 +219,14 @@ void Joystick(unsigned int buttonMask,int x, int y, int z) {
         pressed.jbutton1 = false;
     }
     
-    std::cout << "Joy: " << buttonMask << "\n";
+    if ( buttonMask == 1 ) {
+        pressed.jbutton2 = true;
+    } else {
+        pressed.jbutton2 = false;
+    }
+    
+    
+  // std::cout << "Joy: " << buttonMask << "\n";
 }
 
 

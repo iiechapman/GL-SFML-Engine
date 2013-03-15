@@ -16,11 +16,12 @@
 Sprite::Sprite() {
     //Just used for testing
     isLooping = true;
+    isJumping = false;
     isAnimated = true;
-    isStopped = true;
+    isStopped = false;
     isStopping = true;
     animationDelay = .50f;
-    currentFrameIndex = 0;
+    SetAnimation(stoppedr);
     acceleration.x = 0;
     acceleration.y = 0;
     friction.x  = 0.0f;
@@ -36,9 +37,6 @@ Sprite::Sprite() {
     R=G=B= 1.5f;
 }
 
-Sprite::~Sprite() {
-   
-}
 
 /*
  ========================
@@ -137,14 +135,14 @@ void Sprite::Animate(float deltaTime) {
         currentFrameIndex++;
     }
     
-    long lastFrame = animation.index[currentAnimation].size()-1;
+    unsigned long lastFrame = animation.index[currentAnimation].size() -1;
     
     //if the current frame is outside the last frame 
     if (currentFrameIndex > lastFrame) {
         if ( isLooping ) {
             currentFrameIndex = 0;
         } else {
-            currentFrameIndex = (int)lastFrame ;
+            currentFrameIndex = lastFrame ;
         }
     }
     //Current frame of animation is index selected in current animation
@@ -154,7 +152,6 @@ void Sprite::Animate(float deltaTime) {
 void Sprite::StopAnimation() {
     isAnimated = false;
     currentFrameIndex = 0;
-    isStopped = true;
     Animate(0);
 }
 
@@ -183,23 +180,71 @@ void Sprite::Update(float deltaTime) {
     velocity.x += acceleration.x;
     velocity.y += acceleration.y;
     
+    if (velocity.x !=0 && velocity.y != 0)
+    {
+        isStopped = false;
+       // std::cout << "HELLO";
+    } else {
+        isStopped = true;
+    }
+    //std::cout << isStopped;
+    
+    if ( isJumping ) {
+        switch (direction) {
+            case leftd:
+                SetAnimation(jumpingl);
+                break;
+                
+            case rightd:
+                SetAnimation(jumpingr);
+                break;
+                
+            default:
+                break;
+        }
+    }
+    
     if ( isStopping ) {
         if ( velocity.x > 0 ) {
         velocity.x -= friction.x;
+            //isStopped = false;
             if ( velocity.x <= 0 ) {
                 velocity.x = 0;
+               // isStopped = true;
                 StopAnimation();
             }
         } else if ( velocity.x < 0 ) {
            velocity.x += friction.x;
+            //isStopped = false;
             if ( velocity.x >= 0 ) {
                 velocity.x = 0;
+                //isStopped = true;
                 StopAnimation();
             }
         }
-        
-        
-        velocity.y = 0;
+    }
+    
+    //stopped animation
+    if (isStopped){
+        switch (direction) {
+            case leftd:
+                SetAnimation(stoppedl);
+                break;
+                
+            case rightd:
+                SetAnimation(stoppedr);
+                
+            default:
+                break;
+        }
+    }
+    
+    //turning animation
+    if ( direction == rightd && velocity.x < 0 ) {
+        SetAnimation(turningr);
+    }
+    if ( direction == leftd && velocity.x > 0 ) {
+        SetAnimation(turningl);
     }
 
     
@@ -211,13 +256,16 @@ void Sprite::Update(float deltaTime) {
     if ( velocity.x < minVelocity.x ) {
         velocity.x = minVelocity.x;
     }
-
+    
     
     //Final Movement Vector
     position.x += (velocity.x) * deltaTime;
     position.y += (velocity.y) * deltaTime;
 }
 
+
+//Setters
+//------------------------------------------------------
 void Sprite::SetVelocity(vector2d_t newVelocity) {
     velocity = newVelocity;
 }

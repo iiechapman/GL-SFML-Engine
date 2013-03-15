@@ -26,10 +26,13 @@ Sprite* testSprite;
 vector2d_t tempVec;
 vector2d_t secondVec;
 
+GLuint totalTextures;
+
 const int MAX_FPS = 60;
 bool PLAYMUSIC = true;
 bool DEPTH_ENABLED = false;
-bool FULLSCREEN = true;
+bool FULLSCREEN = false;
+
 bool running;
 bool falling;
 bool jumping;
@@ -99,6 +102,7 @@ void Timer();
 void Idle();
 void Debug();
 void CalculateDrawTime();
+void Quit();
 
 int main ( int argc,char ** argv ) {
     Init();
@@ -160,47 +164,47 @@ void Idle() {
         soundPlayer.setBuffer(hurtSound);
         soundPlayer.play();
         titleSong.stop();
+        Quit();
         exit(0);
         std::cout << "Exit \n";
     }
     
-    if (pressed.shift || pressed.jbutton1) {
+    //Press run button
+    if (pressed.shift || pressed.jbutton1 || pressed.z) {
         secondVec.x = 2.0f;
         sprite[1]->SetMaxVelocity(secondVec);
         secondVec.x = -2.0f;
         sprite[1]->SetMinVelocity(secondVec);
         sprite[1]->SetAnimationDelay(.02f);
     } else {
-        secondVec.x = 1.0f;
+        secondVec.x = 1.4f;
         sprite[1]->SetMaxVelocity(secondVec);
-        secondVec.x = -1.0f;
+        secondVec.x = -1.4f;
         sprite[1]->SetMinVelocity(secondVec);
         sprite[1]->SetAnimationDelay(.05f);
     }
     
-    //if pressed up
-    if ( pressed.kup || pressed.jup) {
-        //tempVec.y = 0.9f;
-        sprite[1]->isStopped = false;
-        
-    } else if( pressed.kdown || pressed.jdown) {
-        //tempVec.y = -0.9f;
-        sprite[1]->isStopped = false;
-        
+    //Press Jump button
+    if ( pressed.x || pressed.jbutton2 ) {
+        tempVec.y = 0.09f;
+        sprite[1]->isJumping = true;
     } else {
         tempVec.y = 0.0f;
     }
     
+    //press left or right
     if ( pressed.kleft || pressed.jleft ) {
-        tempVec.x = -0.13f;
+        tempVec.x = -0.05f;
+        sprite[1]->direction = leftd;
         sprite[1]->isAnimated = true;
-        sprite[1]->SetAnimation(0);
+        sprite[1]->SetAnimation(runningl);
         sprite[1]->isStopping = false;
 
     } else if( pressed.kright || pressed.jright) {
-        tempVec.x = 0.13f;
+        tempVec.x = 0.05f;
+        sprite[1]->direction = rightd;
         sprite[1]->isAnimated = true;
-        sprite[1]->SetAnimation(1);
+        sprite[1]->SetAnimation(runningr);
         sprite[1]->isStopping = false;
     } else {
         tempVec.x = 0.0f;
@@ -353,9 +357,25 @@ void CalculateDrawTime() {
 }
 
 void Animate(){
-    for (vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; ++i ){
+    for (vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; i++ ){
         (*i)->Animate(deltaDraw);
     }
+}
+
+
+void Quit() {
+    delete marioSprite;
+    marioSprite = 0;
+    delete testSprite;
+    testSprite = 0 ;
+    /*
+    for (vector<Sprite*>::iterator i = sprite.begin() ; i < sprite.end() ; i++ ) {
+        delete (*i);
+        (*i) = 0;
+    }
+     */
+    sprite.clear();
+    
 }
 
 void Debug() {
@@ -367,6 +387,7 @@ void Debug() {
     testSprite->AddAnimation(blankAnimation);
     testSprite->SetAnimation(0);
     testSprite->AddFrame("background1.png", 0);
+    totalTextures++;
     testSprite->SetPosition(-1, 1, 0);
     testSprite->SetSize(2, 2, 0);
     sprite.push_back(testSprite);
@@ -377,21 +398,72 @@ void Debug() {
     marioSprite->AddAnimation(blankAnimation);
     marioSprite->SetAnimation(0);
     marioSprite->SetAnimationDelay(0.04f);
-    marioSprite->AddAnimation(blankAnimation);
-    marioSprite->SetAnimation(0);
-    marioSprite->AddFrame("marioleft.png", 0);
-    marioSprite->AddFrame("marioleft2.png", 0);
-    marioSprite->AddFrame("marioleft3.png", 0);
-    marioSprite->AddAnimation(blankAnimation);
-    marioSprite->AddFrame("marioright.png", 1);
-    marioSprite->AddFrame("marioright2.png", 1);
-    marioSprite->AddFrame("marioright3.png", 1);
+    
+ 
+    for (int i = 0 ; i < 18 ; i++ ) {
+        marioSprite->AddAnimation(blankAnimation);
+    }
+    //Set mario facing right stopped
+    marioSprite->SetAnimation(stoppedr);
+ 
+    //running/stopped left animaiton
+    marioSprite->AddFrame("marioleft.png", stoppedl);
+    totalTextures++;
+    marioSprite->AddFrame("marioleft.png", runningl);
+    totalTextures++;
+    marioSprite->AddFrame("marioleft2.png", runningl);
+    totalTextures++;
+    marioSprite->AddFrame("marioleft3.png", runningl);
+    totalTextures++;
+    
+    //running stoppped right animation
+    marioSprite->AddFrame("marioright.png", stoppedr);
+    totalTextures++;
+    
+    marioSprite->AddFrame("marioright.png", runningr);
+    totalTextures++;
+    marioSprite->AddFrame("marioright2.png", runningr);
+    totalTextures++;
+    marioSprite->AddFrame("marioright3.png", runningr);
+    totalTextures++;
+    
+    //jumping left animation
+    marioSprite->AddFrame("mariojumpleft.png", jumpingl);
+    totalTextures++;
+    
+    //jumping right animation
+    marioSprite->AddFrame("mariojumpright.png", jumpingr);
+    totalTextures++;
+    
+    //falling left animation
+    marioSprite->AddFrame("mariojumpleft.png", fallingl);
+    totalTextures++;
+    
+    //falling right animation
+    marioSprite->AddFrame("mariojumpright.png", fallingr);
+    totalTextures++;
+    
+    //turning left animation
+    marioSprite->AddFrame("marioturnright.png", turningl);
+    totalTextures++;
+    
+    //turning right animation
+    marioSprite->AddFrame("marioturnleft.png", turningr);
+    totalTextures++;
+    //dying left animation
+    marioSprite->AddFrame("mariodying.png", dyingl);
+    totalTextures++;
+    
+    //dying right animation
+    marioSprite->AddFrame("mariodying.png", dyingr);
+    totalTextures++;
+    
     vector2d_t tVec;
     tVec.x = 0.04f;
     marioSprite->SetFriction(tVec);
-    tVec.x = 1.2f;
+    tVec.x = 1.5f;
     marioSprite->SetMaxVelocity(tVec);
-    tVec.x = -1.2f;
+    tVec.x = -1.5f;
     marioSprite->SetMinVelocity(tVec);
     marioSprite->SetAnimation(1);
     marioSprite->StopAnimation();
@@ -403,16 +475,19 @@ void Debug() {
     marioSprite->SetAnimation(0);
     marioSprite->SetAnimationDelay(0.07f);
     marioSprite->AddFrame("block1.png", 0);
+    totalTextures++;
     marioSprite->AddFrame("block2.png", 0);
+    totalTextures++;
     marioSprite->AddFrame("block3.png", 0);
+    totalTextures++;
     marioSprite->AddFrame("block4.png", 0);
+    totalTextures++;
     marioSprite->SetPosition(-.2, -.2, 0);
+    totalTextures++;
     marioSprite->SetSize(.2, .22, 0.0f);
+    totalTextures++;
     
     sprite.push_back(marioSprite);
-    
-
-    
     }
 
 

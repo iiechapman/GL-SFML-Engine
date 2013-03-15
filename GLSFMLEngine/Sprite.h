@@ -24,17 +24,44 @@ typedef struct animation_s{
     vector<vector<int>> index;
 } animation_t ;
 
+
+typedef enum {
+    stoppedl,
+    stoppedr,
+    runningl,
+    runningr,
+    jumpingl,
+    jumpingr,
+    fallingl,
+    fallingr,
+    turningl,
+    turningr,
+    hurtingl,
+    hurtingr,
+    dyingl,
+    dyingr,
+    swimmingl,
+    swimmingr,
+    climbingl,
+    climbingr,
+} actions_t;
+
 class Sprite {
     public:
     
     Sprite();
-    ~Sprite();
     
     bool isAnimated;
     bool isFalling;
+    bool isJumping;
+    bool isTurning;
     bool isStopped;
     bool isStopping;
-
+    bool isHurt;
+    bool isDying;
+    
+    
+    direction_t direction;
     
     void Update(float deltaTime);
     
@@ -61,8 +88,8 @@ class Sprite {
     
     private:
     animation_t animation;
-    int currentFrame;
-    int currentFrameIndex;
+    unsigned long currentFrame;
+    unsigned long currentFrameIndex;
     int currentAnimation;
     bool isLooping;
     float animationDelay;
