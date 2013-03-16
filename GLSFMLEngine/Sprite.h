@@ -50,8 +50,12 @@ class Sprite {
     public:
     
     Sprite();
+    ~Sprite();
+    
+    string name;
     
     bool isAnimated;
+    bool isColliding;
     bool isFalling;
     bool isJumping;
     bool isTurning;
@@ -60,6 +64,7 @@ class Sprite {
     bool isHurt;
     bool isDying;
     
+    unsigned int numberOfAnimations;
     
     direction_t direction;
     
@@ -68,10 +73,16 @@ class Sprite {
     void SetVelocity(vector2d_t newVelocity);
     void SetMaxVelocity(vector2d_t newMaxVelocity);
     void SetMinVelocity(vector2d_t newMinVelocity);
-    vector2d_t GetVelocity();
     void SetGravity(vector2d_t newGravity);
+    void SetMaxGravity( vector2d_t newMaxGravity );
     void SetFriction(vector2d_t newFriction);
     void SetAcceleration(vector2d_t newAcceleration);
+
+    
+    vector2d_t GetVelocity();
+    dimensions_t GetPosition();
+    vector2d_t  GetGravity();
+    
     
     void AddFrame(const std::string& filename , int animationIndex);
     void AddAnimation(vector<int> newAnimation);
@@ -88,7 +99,7 @@ class Sprite {
     
     private:
     animation_t animation;
-    unsigned long currentFrame;
+    GLuint currentFrame;
     unsigned long currentFrameIndex;
     int currentAnimation;
     bool isLooping;
