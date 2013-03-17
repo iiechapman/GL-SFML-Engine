@@ -42,6 +42,13 @@ Sprite::Sprite() {
     
     minVelocity.x = -0.0f;
     minVelocity.y = -0.0f;
+    
+    maxGravity.x = 0.0f;
+    maxGravity.y = 0.0f;
+    
+    jumpStrength.x = 0.0f;
+    jumpStrength.x = 0.0f;
+    
     velocity.x = 0;
     velocity.y = 0;
     
@@ -202,9 +209,6 @@ void Sprite::SetSize(float x, float y, float z) {
     size.z = z;
 }
 
-
-
-
 //Updates + Physics
 //--------------------------
 
@@ -221,42 +225,46 @@ void Sprite::Update(float deltaTime) {
     }
     //std::cout << isStopped;
 
-    //If collision, stop jumping
-    if ( isColliding ) {
-        isJumping = false;
-        velocity.y = 0.0f;
-        //std::cout << "Is colliding! \n";
+    if (!isColliding && !isJumping && !isFalling && !isStopped) {
+        //isFalling = true;
+       // std::cout << "stoppping? \n";
     }
     
     //if jumping, apply gravity
     if ( isJumping ) {
         if ( velocity.y < maxGravity.y ) {
+            isJumping = false;
+            isFalling = true;
             velocity.y = maxGravity.y;
+            //std::cout << "is falling? " << isFalling << "is jumping? " << isJumping << "\n";
         }
         velocity.y += gravity.y;
-        std::cout << "Up up and away! \n";
+        //std::cout << "Up up and away! \n";
     }
     
     
     if ( isStopping ) {
         if ( velocity.x > 0 ) {
             velocity.x -= friction.x;
-            if ( velocity.x <= 0 ) {
+            if ( velocity.x < 0 ) {
                 velocity.x = 0;
+                isStopping = false;
                 if (!isJumping){
-                isStopped = true;
+                    isStopped = true;
+                }
             }
         } else if ( velocity.x < 0 ) {
            velocity.x += friction.x;
             if ( velocity.x >= 0 ) {
                 velocity.x = 0;
+                isStopping = false;
                 if (!isJumping){
                     isStopped = true;
                 }
             }
         }
     }
-    }
+
     
     if ( velocity.x > 0 ) {
         isStopped = false;
@@ -295,11 +303,14 @@ void Sprite::Update(float deltaTime) {
     }
     
     //turning animation
-    if ( direction == rightd && velocity.x < 0 ) {
+    if ( direction == rightd && velocity.x < 0 && !isFalling && !isJumping) {
+        isTurning = true;
         SetAnimation(turningr);
-    }
-    if ( direction == leftd && velocity.x > 0 ) {
+    } else if ( direction == leftd && velocity.x > 0 && !isFalling && !isJumping ) {
+        isTurning = true;
         SetAnimation(turningl);
+    } else {
+        isTurning = false;
     }
     
     //Floor max and min vector
@@ -311,7 +322,7 @@ void Sprite::Update(float deltaTime) {
         velocity.x = minVelocity.x;
     }
     
-    if ( isJumping ) {
+    if ( isJumping || isFalling ) {
         switch (direction) {
             case leftd:
                 SetAnimation(jumpingl);
@@ -326,9 +337,27 @@ void Sprite::Update(float deltaTime) {
         }
     }
     
+    //If collision, stop jumping
+    if ( isColliding && (velocity.x >0 || velocity.y > 0)) {
+        isJumping = false;
+        isFalling = false;
+        velocity.y = 0.0f;
+        velocity.x = 0.0f;
+        acceleration.x = 0.0f;
+        isColliding = false;
+        std::cout << "Is colliding! \n";
+    }
+    
     //Final Movement Vector
     position.x += (velocity.x) * deltaTime;
     position.y += (velocity.y) * deltaTime;
+}
+
+void Sprite::Jump() {
+    if (isFalling == false && isJumping == false) {
+        isJumping = true;
+        velocity.y = jumpStrength.y ;
+    }
 }
 
 
@@ -362,6 +391,9 @@ void Sprite::SetMaxGravity( vector2d_t newMaxGravity ) {
     maxGravity = newMaxGravity;
 }
 
+void Sprite::SetJumpStrength(vector2d_t newJumpStrength) {
+    jumpStrength = newJumpStrength;
+}
 
 //Getters
 
@@ -377,7 +409,21 @@ dimensions_t Sprite::GetPosition() {
     return position;
 }
 
+bool Sprite::Turning() {
+    return isTurning;
+}
 
+
+bool Sprite::Colliding(Sprite& rhs) {
+    if (    position.x + size.x > rhs.position.x
+        &&  position.x < rhs.position.x + rhs.size.x
+        &&  position.y > rhs.position.y - rhs.size.y
+        &&  position.y - size.y < rhs.position.y ) {
+        std::cout <<"colliding \n   ";
+        return false;
+    }
+    return false;
+}
 
 
 

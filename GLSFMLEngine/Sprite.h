@@ -70,11 +70,14 @@ class Sprite {
     
     void Update(float deltaTime);
     
+    void Jump();
+    
     void SetVelocity(vector2d_t newVelocity);
     void SetMaxVelocity(vector2d_t newMaxVelocity);
     void SetMinVelocity(vector2d_t newMinVelocity);
     void SetGravity(vector2d_t newGravity);
     void SetMaxGravity( vector2d_t newMaxGravity );
+    void SetJumpStrength (vector2d_t newJumpStrength);
     void SetFriction(vector2d_t newFriction);
     void SetAcceleration(vector2d_t newAcceleration);
 
@@ -82,6 +85,7 @@ class Sprite {
     vector2d_t GetVelocity();
     dimensions_t GetPosition();
     vector2d_t  GetGravity();
+    bool Turning();
     
     
     void AddFrame(const std::string& filename , int animationIndex);
@@ -96,6 +100,8 @@ class Sprite {
     void SetColor(float red, float green, float blue);
     void SetPosition ( float x,float y ,float z );
     void SetSize (float x, float y, float z);
+
+    bool Colliding(Sprite& rhs);
     
     private:
     animation_t animation;
@@ -117,6 +123,7 @@ class Sprite {
     
     vector2d_t gravity;
     vector2d_t maxGravity;
+    vector2d_t jumpStrength;
     
     vector2d_t friction;
     vector2d_t maxFriction;

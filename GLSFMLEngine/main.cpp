@@ -1,6 +1,7 @@
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include <SFML/Audio/SoundSource.hpp>
 #include <OpenGL/OpenGL.h>
 #include <GLUT/GLUT.h>
 #include <iostream>
@@ -26,6 +27,7 @@ Sprite* blockSprite;
 
 vector2d_t tempVec;
 vector2d_t secondVec;
+
 
 GLuint totalTextures;
 
@@ -83,10 +85,13 @@ range_t stoppedleft;
 
 
 sf::Music titleSong;
+sf::Sound soundPlayer;
+sf::Sound skid;
+
 sf::SoundBuffer hurtSound;
 sf::SoundBuffer startSound;
-sf::Sound soundPlayer;
-
+sf::SoundBuffer jumpSound;
+sf::SoundBuffer skidSound;
 
 void Init();
 void Display();
@@ -108,11 +113,13 @@ void Quit();
 int main ( int argc,char ** argv ) {
     Init();
     soundPlayer.setBuffer(startSound);
+    skid.setBuffer(skidSound);
+    
     //Create opengl context
     std::cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowPosition( 900, 300 );
+    glutInitWindowPosition( 600, 300 );
     glutInitWindowSize( 1024, 768 );
     glutGameModeString("1024x768:32");
     soundPlayer.play();
@@ -134,8 +141,11 @@ int main ( int argc,char ** argv ) {
     
     //Play music
     if (PLAYMUSIC){
+        titleSong.setVolume(50.0f);
         titleSong.play();
     }
+    //Load jump sound
+    soundPlayer.setBuffer(jumpSound);
     
     Debug();
 
@@ -170,6 +180,7 @@ void Idle() {
         std::cout << "Exit \n";
     }
     
+    
     //Press run button
     if (pressed.shift || pressed.jbutton1 || pressed.z) {
         secondVec.x = 2.0f;
@@ -184,45 +195,78 @@ void Idle() {
         sprite[1]->SetMinVelocity(secondVec);
         sprite[1]->SetAnimationDelay(.05f);
     }
-    
+
     //Press Jump button
-    if ( pressed.x || pressed.jbutton2 ) {
-        tempVec.y = 1.59f;
-        sprite[1]->isJumping = true;
+    if ( (pressed.x || pressed.jbutton2) && !sprite[1]->isFalling && !sprite[1]->isJumping) {
+        std::cout << "jumpin woah there...\n";
+        soundPlayer.play();
+        sprite[1]->Jump();
     } else {
         tempVec.y = 0.0f;
+    }
+    
+    //change jump height
+    vector2d_t  tempGravity;
+    if ( pressed.x || pressed.jbutton2 ) {
+        tempGravity.y = -3.5f;
+        sprite[1]->SetMaxGravity(tempGravity);
+        tempGravity.y = -0.07f;
+        sprite[1]->SetGravity(tempGravity);
+    } else {
+        tempGravity.y = -2.9f;
+        sprite[1]->SetMaxGravity(tempGravity);
+        tempGravity.y = -0.3f;
+        sprite[1]->SetGravity(tempGravity);
     }
     
     //std::cout << "Gravy : " << sprite[1]->GetGravity().y << "\n" ;
     
    // std::cout << "jump: " << sprite[1]->isJumping << " \n";
-    //Position bottom collision?
+    
+    //check collisions
     dimensions_t collision = sprite[1]->GetPosition();
+     
+    dimensions_t shift ;
+   // dimensions_t final;
+    
+    shift = sprite[2]->GetPosition();
+    
+    sprite[1]->isColliding = sprite[1]->Colliding(*sprite[2]);
     
     if ( collision.y < -0.62f ) {
         sprite[1]->isColliding = true;
         sprite[1]->isJumping = false;
-        sprite[1]->SetPosition(collision.x, -0.62f, collision.x);
+        sprite[1]->isFalling = false;
+        tempVec.x = sprite[1]->GetVelocity().x;
+        tempVec.y = 0;
+        sprite[1]->SetVelocity(tempVec);
+        sprite[1]->SetPosition(collision.x, -0.62f, collision.z);
     } else if (collision.y >= -0.62f ){
         sprite[1]->isColliding = false;
-        
     }
     
     //std::cout << "x: " << collision.x << " y: " << collision.y << " \n";
+
+    //end collisions--------------------
+    
+    
+    if ( sprite[1]->Turning() == true ) {
+        if ( skid.getStatus() == 0 ) {
+            skid.play();
+        }
+    }
     
     //press left or right
     if ( pressed.kleft || pressed.jleft ) {
         tempVec.x = -0.05f;
         sprite[1]->direction = leftd;
         sprite[1]->isAnimated = true;
-        //sprite[1]->SetAnimation(runningl);
         sprite[1]->isStopping = false;
 
     } else if( pressed.kright || pressed.jright) {
         tempVec.x = 0.05f;
         sprite[1]->direction = rightd;
         sprite[1]->isAnimated = true;
-        //sprite[1]->SetAnimation(runningr);
         sprite[1]->isStopping = false;
     } else {
         tempVec.x = 0.0f;
@@ -282,6 +326,14 @@ void Init(){
     
     if (!startSound.loadFromFile("start.wav")) {
         std::cout << "Failed to load sound... \n";
+    }
+    
+    if (!jumpSound.loadFromFile("jump.wav")) {
+        std::cout << "Could not load sound...\n";
+    }
+    
+    if (!skidSound.loadFromFile("skid.wav")) {
+        std::cout << "Could not load file \n";
     }
     
 }
@@ -481,16 +533,16 @@ void Debug() {
     //marioSprite->SetAnimation(stoppedr);
     
     vector2d_t tVec;
-    tVec.x = 0.04f;
+    tVec.x = 0.06f;
     marioSprite->SetFriction(tVec);
-    tVec.x = 1.5f;
+    tVec.x = 1.3f;
     marioSprite->SetMaxVelocity(tVec);
     tVec.x = -1.5f;
     marioSprite->SetMinVelocity(tVec);
-    tVec.y = -0.8f;
+    tVec.y = -0.1f;
     marioSprite->SetGravity(tVec);
-    tVec.y = -2.5f;
-    marioSprite->SetMaxGravity(tVec);
+    tVec.y = 3.9f;
+    marioSprite->SetJumpStrength(tVec);
     
     //marioSprite->SetAnimation(1);
     marioSprite->StopAnimation();
