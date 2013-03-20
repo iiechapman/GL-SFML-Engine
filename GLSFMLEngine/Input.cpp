@@ -12,12 +12,18 @@
 #include <GLUT/GLUT.h>
 
 buttons_t pressed;
+buttons_t held;
+buttons_t released;
 
 void Keyboard( unsigned char key,int x, int y ) {
     std::cout << "Key: " << key << "\n";
     switch ( key ) {
         case kesc:
-            pressed.escape = true;
+            if (pressed.escape){
+                held.escape = true;
+            } else {
+                pressed.escape = true;
+            }
             break;
             
         case '=':
@@ -53,11 +59,27 @@ void Keyboard( unsigned char key,int x, int y ) {
             break;
             
         case 'z':
+            if (pressed.z) {
+                held.z = true;
+            } else {
             pressed.z = true;
+            }
             break;
             
         case 'x':
-            pressed.x = true;
+            if (pressed.x) {
+                held.x = true;
+            } else {
+                pressed.x = true;
+            }
+            break;
+            
+        case 'f':
+            if (pressed.f) {
+                held.f = true;
+            } else {
+                pressed.f = true;
+            }
             break;
             
         default:
@@ -108,10 +130,17 @@ void KeyboardUp( unsigned char key, int x, int y ) {
             
         case 'z':
             pressed.z = false;
+            held.z = false;
             break;
             
         case 'x':
             pressed.x = false;
+            held.x = false;
+            break;
+            
+        case 'f':
+            pressed.f = false;
+            held.f = false;
             break;
             
     }
@@ -214,15 +243,25 @@ void Joystick(unsigned int buttonMask,int x, int y, int z) {
     }
     
     if ( buttonMask == 8 ) {
-        pressed.jbutton1 = true;
+        if (pressed.jbutton1) {
+            held.jbutton1 = true;
+        }else {
+            pressed.jbutton1 = true;
+        }
     } else {
         pressed.jbutton1 = false;
+        held.jbutton1 = false;
     }
     
     if ( buttonMask == 1 ) {
-        pressed.jbutton2 = true;
+        if (pressed.jbutton2) {
+            held.jbutton2  = true;
+        } else {
+            pressed.jbutton2 = true;
+        }
     } else {
         pressed.jbutton2 = false;
+        held.jbutton2 = false;
     }
     
     

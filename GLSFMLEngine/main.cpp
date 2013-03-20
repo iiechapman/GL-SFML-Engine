@@ -34,15 +34,12 @@ GLuint totalTextures;
 const int MAX_FPS = 60;
 bool PLAYMUSIC = true;
 bool DEPTH_ENABLED = false;
-bool FULLSCREEN = true;
+bool FULLSCREEN = false;
 
 bool running;
 bool falling;
 bool jumping;
 bool stopped;
-
-//button and sprite variables
-//buttons_t       pressed;
 
 dimensions_t    position;
 dimensions_t    deltaPosition;
@@ -124,9 +121,10 @@ int main ( int argc,char ** argv ) {
     glutGameModeString("1024x768:32");
     soundPlayer.play();
     if ( !FULLSCREEN ) {
-        glutCreateWindow( "Opengl 2D Engine  V1.0" );
+        glutCreateWindow( "Super Mario Open - By Evan Chapman" );
     } else {
-        glutEnterGameMode();
+        glutCreateWindow( "Super Mario Open - By Evan Chapman" );
+        glutFullScreen();
     }
     glClearColor( 0.0f, 0.37f, 0.71f, 0.0f );
     glutDisplayFunc( Display );
@@ -166,7 +164,6 @@ int main ( int argc,char ** argv ) {
 
 void Idle() {
     glutForceJoystickFunc();
-    
     //if escaped
     if ( pressed.escape ) {
         if ( FULLSCREEN ) {
@@ -180,9 +177,20 @@ void Idle() {
         std::cout << "Exit \n";
     }
     
+    if ( pressed.f && held.f != true ) {
+        if (FULLSCREEN){
+            glutReshapeWindow(1024, 768 );
+            glutPositionWindow(600, 300 );
+            FULLSCREEN = false;
+        } else {
+            FULLSCREEN = true;
+            glutFullScreen();
+        }
+    
+    }
     
     //Press run button
-    if (pressed.shift || pressed.jbutton1 || pressed.z) {
+    if (held.shift || held.jbutton1 || held.z) {
         secondVec.x = 2.0f;
         sprite[1]->SetMaxVelocity(secondVec);
         secondVec.x = -2.0f;
@@ -196,26 +204,29 @@ void Idle() {
         sprite[1]->SetAnimationDelay(.05f);
     }
 
-    //Press Jump button
-    if ( (pressed.x || pressed.jbutton2) && !sprite[1]->isFalling && !sprite[1]->isJumping) {
-        std::cout << "jumpin woah there...\n";
+    //Press Jump button make mario jump
+    if ( (pressed.x || pressed.jbutton2)
+        && !sprite[1]->isFalling
+        && !sprite[1]->isJumping
+        && !held.x ) {
+        //std::cout << "jumpin woah there...\n";
         soundPlayer.play();
         sprite[1]->Jump();
     } else {
         tempVec.y = 0.0f;
     }
     
-    //change jump height
+    //change jump height based on length of jump button hold
     vector2d_t  tempGravity;
     if ( pressed.x || pressed.jbutton2 ) {
-        tempGravity.y = -3.5f;
+        tempGravity.y = -2.8f;
         sprite[1]->SetMaxGravity(tempGravity);
         tempGravity.y = -0.07f;
         sprite[1]->SetGravity(tempGravity);
     } else {
-        tempGravity.y = -2.9f;
+        tempGravity.y = -2.8f;
         sprite[1]->SetMaxGravity(tempGravity);
-        tempGravity.y = -0.3f;
+        tempGravity.y = -0.2f;
         sprite[1]->SetGravity(tempGravity);
     }
     
@@ -541,11 +552,13 @@ void Debug() {
     marioSprite->SetMinVelocity(tVec);
     tVec.y = -0.1f;
     marioSprite->SetGravity(tVec);
-    tVec.y = 3.9f;
+    tVec.y = 4.0f;
     marioSprite->SetJumpStrength(tVec);
     
     //marioSprite->SetAnimation(1);
     marioSprite->StopAnimation();
+    marioSprite->direction = rightd;
+    marioSprite->SetAnimation(stoppedr);
     sprite.push_back(marioSprite);
     marioSprite = 0;
     

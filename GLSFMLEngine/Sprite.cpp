@@ -216,6 +216,11 @@ void Sprite::Update(float deltaTime) {
     velocity.x += acceleration.x;
     velocity.y += acceleration.y;
     
+    
+    if (velocity.y == 0) {
+        stoppedJumping = true;
+    }
+    
     if (velocity.x !=0 && velocity.y != 0)
     {
         isStopped = false;
@@ -356,6 +361,7 @@ void Sprite::Update(float deltaTime) {
 void Sprite::Jump() {
     if (isFalling == false && isJumping == false) {
         isJumping = true;
+        stoppedJumping = false;
         velocity.y = jumpStrength.y ;
     }
 }

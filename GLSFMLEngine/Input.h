@@ -13,6 +13,9 @@
 #include "GameTypes.h"
 
 extern buttons_t pressed;
+extern buttons_t held;
+extern buttons_t released;
+
 void Keyboard( unsigned char key,int x, int y );
 void KeyboardUp( unsigned char key, int x, int y );
 void SpecialKey( int key, int x, int y );

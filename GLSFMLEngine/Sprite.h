@@ -63,6 +63,7 @@ class Sprite {
     bool isStopping;
     bool isHurt;
     bool isDying;
+    bool stoppedJumping;
     
     unsigned int numberOfAnimations;
     
