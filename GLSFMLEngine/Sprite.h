@@ -65,6 +65,11 @@ class Sprite {
     bool isDying;
     bool stoppedJumping;
     
+    bool topCollision;
+    bool bottomCollision;
+    bool leftCollision;
+    bool rightCollision;
+    
     unsigned int numberOfAnimations;
     
     direction_t direction;
@@ -86,6 +91,7 @@ class Sprite {
     vector2d_t GetVelocity();
     dimensions_t GetPosition();
     vector2d_t  GetGravity();
+    vector2d_t  GetMaxGravity();
     bool Turning();
     
     
@@ -96,11 +102,13 @@ class Sprite {
     void StopAnimation();
     void RemoveAnimation(int indexToRemove);
     void Animate(float deltaTime);
+    void SetLooping( bool flag );
     
     void Draw();
     void SetColor(float red, float green, float blue);
     void SetPosition ( float x,float y ,float z );
     void SetSize (float x, float y, float z);
+    dimensions_t GetSize();
 
     bool Colliding(Sprite& rhs);
     

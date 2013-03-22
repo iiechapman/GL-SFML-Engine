@@ -15,20 +15,30 @@
  */
 Sprite::Sprite() {
     //Just used for testing
-    isLooping = true;
-    isTurning = false;
-    isJumping = false;
-    isAnimated = true;
+    isAnimated = false;
+    isColliding = false;
     isFalling = false;
     isJumping = false;
-    isStopped = true;
+    isTurning = false;
+    isStopped = false;
     isStopping = false;
-    animationDelay = .50f;
+    isHurt = false;
+    isDying = false;
+    stoppedJumping = false;
+    isLooping = false;
+    
+    numberOfAnimations = 0;
+    animationDelay = 0;
+    animationDelayTotal = 0;
     SetAnimation(0);
     currentAnimation = 0;
     currentFrame = 0;
     currentFrameIndex = 0;
     
+    topCollision = false;
+    bottomCollision = false;
+    rightCollision = false;
+    leftCollision = false;
     
     acceleration.x = 0;
     acceleration.y = 0;
@@ -36,6 +46,9 @@ Sprite::Sprite() {
     friction.y = 0.0f ;
     maxFriction.x = 0.0f;
     maxFriction.y = 0.0f;
+    
+    jumpStrength.x = 0.0f;
+    jumpStrength.y = 0.0f;
     
     maxVelocity.x = 0.0f;
     maxVelocity.y = 0.0f;
@@ -52,7 +65,7 @@ Sprite::Sprite() {
     velocity.x = 0;
     velocity.y = 0;
     
-    
+    direction = leftd;
     R=G=B= 1.5f;
 }
 
@@ -76,17 +89,22 @@ void Sprite::Draw() {
     glBegin( GL_QUADS );
     glColor3f( R, G, B );
     
-    glTexCoord2f( 0, 0 );//Bottom Left
+    glTexCoord2f( 0, 0 );//top Left
     glVertex3f( position.x, position.y, position.z );
-    glTexCoord2f( 1, 0 );//Bottom Right
+    glTexCoord2f( 1, 0 );//top Right
     glVertex3f( position.x + size.x, position.y, position.z );
-    glTexCoord2f( 1, 1 );//Top Right
+    glTexCoord2f( 1, 1 );//bottom Right
     glVertex3f( position.x + size.x, position.y - size.y,position.z );
-    glTexCoord2f( 0, 1 );//Top left
+    glTexCoord2f( 0, 1 );//bottom left
     glVertex3f( position.x, position.y - size.y,position.z );
     glEnd();
 }
 
+void Sprite::SetColor(float red, float green, float blue ){
+    R = red;
+    G = green;
+    B = blue;
+}
 
 
 //Animation
@@ -158,15 +176,6 @@ void Sprite::SetAnimationDelay( float delay ) {
  ==========================
  */
 void Sprite::Animate(float deltaTime) {
-    /*
-    if ( deltaTime >= 10.0f ) {
-        deltaTime = 10.0f;
-    }
-    
-    if ( deltaTime < 0 ) {
-        deltaTime = 0;
-    }
-    */
     animationDelayTotal += deltaTime;
     
     if ( animationDelayTotal >= animationDelay && isAnimated ) {
@@ -181,7 +190,7 @@ void Sprite::Animate(float deltaTime) {
         if ( isLooping ) {
             currentFrameIndex = 0;
         } else {
-            currentFrameIndex = 0 ;
+            currentFrameIndex = lastFrame ;
         }
     }
     //Current frame of animation is index selected in current animation
@@ -193,6 +202,11 @@ void Sprite::StopAnimation() {
     currentFrameIndex = 0;
     Animate(0);
 }
+
+void Sprite::SetLooping( bool flag ){
+    isLooping = flag;
+}
+
 
 //Dimensions
 //-----------------------------
@@ -350,7 +364,7 @@ void Sprite::Update(float deltaTime) {
         velocity.x = 0.0f;
         acceleration.x = 0.0f;
         isColliding = false;
-        std::cout << "Is colliding! \n";
+        //std::cout << "Is colliding! \n";
     }
     
     //Final Movement Vector
@@ -411,8 +425,16 @@ vector2d_t Sprite::GetGravity() {
     return gravity;
 }
 
+vector2d_t Sprite::GetMaxGravity() {
+    return maxGravity;
+}
+
 dimensions_t Sprite::GetPosition() {
     return position;
+}
+
+dimensions_t Sprite::GetSize() {
+    return size;
 }
 
 bool Sprite::Turning() {
@@ -421,15 +443,57 @@ bool Sprite::Turning() {
 
 
 bool Sprite::Colliding(Sprite& rhs) {
-    if (    position.x + size.x > rhs.position.x
-        &&  position.x < rhs.position.x + rhs.size.x
-        &&  position.y > rhs.position.y - rhs.size.y
-        &&  position.y - size.y < rhs.position.y ) {
-        std::cout <<"colliding \n   ";
-        return false;
+    if (position.x  > rhs.position.x + rhs.size.x)
+    {
+        rightCollision = true;
+        leftCollision = false;
+        topCollision = false;
+        bottomCollision = false;
+    } else {
+        //rightCollision = false;
     }
-    return false;
-}
+    
+    if (position.x + size.x < rhs.position.x){
+        leftCollision = true;
+        rightCollision = false;
+        topCollision = false;
+        bottomCollision = false;
+    
+    }else
+    {// leftCollision = false;
+    }
+    
+    if (position.y - size.y > rhs.position.y)   {
+        topCollision = true;
+        rightCollision = false;
+        leftCollision = false;
+        bottomCollision = false;
+    }else
+    { //topCollision = false;
+    }
+    
+    if (position.y < rhs.position.y - rhs.size.y ){
+        bottomCollision = true;
+        rightCollision = false;
+        leftCollision = false;
+        topCollision = false;
+    }else
+    { //bottomCollision = false;
+    }
+
+    if (    position.x + size.x >= rhs.position.x
+        &&  position.x <= rhs.position.x + rhs.size.x
+        &&  position.y >= rhs.position.y - rhs.size.y
+        &&  position.y - size.y <= rhs.position.y ) {
+        //std::cout <<"colliding \n   ";
+        isColliding = true;
+//        return isColliding;
+        
+    } else 
+    isColliding = false;
+    return isColliding;
+    }
+
 
 
 

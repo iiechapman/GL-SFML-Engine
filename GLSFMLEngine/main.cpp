@@ -32,10 +32,11 @@ vector2d_t secondVec;
 GLuint totalTextures;
 
 const int MAX_FPS = 60;
-bool PLAYMUSIC = true;
+bool PLAYMUSIC = false;
 bool DEPTH_ENABLED = false;
 bool FULLSCREEN = false;
-
+string windowTitle = "Super Mario Open - By Evan Chapman";
+string title = "Super Mario Open - By Evan Chapman";
 bool running;
 bool falling;
 bool jumping;
@@ -116,14 +117,15 @@ int main ( int argc,char ** argv ) {
     std::cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowPosition( 600, 300 );
+    glutInitWindowPosition( 200, 200 );
     glutInitWindowSize( 1024, 768 );
     glutGameModeString("1024x768:32");
     soundPlayer.play();
     if ( !FULLSCREEN ) {
-        glutCreateWindow( "Super Mario Open - By Evan Chapman" );
+        
+        glutCreateWindow( windowTitle.c_str() );
     } else {
-        glutCreateWindow( "Super Mario Open - By Evan Chapman" );
+        glutCreateWindow( windowTitle.c_str() );
         glutFullScreen();
     }
     glClearColor( 0.0f, 0.37f, 0.71f, 0.0f );
@@ -164,6 +166,10 @@ int main ( int argc,char ** argv ) {
 
 void Idle() {
     glutForceJoystickFunc();
+    
+    //mario position
+    //std::cout << "y : " << sprite[1]->GetPosition().y << " y size: " << sprite[1]->GetSize().y << endl;
+    
     //if escaped
     if ( pressed.escape ) {
         if ( FULLSCREEN ) {
@@ -188,27 +194,43 @@ void Idle() {
         }
     
     }
+    //press left or right
+    if ( pressed.kleft || pressed.jleft ) {
+        tempVec.x = -0.009f;
+        sprite[1]->direction = leftd;
+        sprite[1]->isAnimated = true;
+        sprite[1]->isStopping = false;
+        
+    } else if( pressed.kright || pressed.jright) {
+        tempVec.x = 0.009f;
+        sprite[1]->direction = rightd;
+        sprite[1]->isAnimated = true;
+        sprite[1]->isStopping = false;
+    } else {
+        tempVec.x = 0.0f;
+        sprite[1]->isStopping = true;
+    }
     
     //Press run button
-    if (held.shift || held.jbutton1 || held.z) {
-        secondVec.x = 2.0f;
+    if (pressed.shift || held.jbutton1 || pressed.z) {
+        secondVec.x = 1.8f;
         sprite[1]->SetMaxVelocity(secondVec);
-        secondVec.x = -2.0f;
+        secondVec.x = -1.8f;
         sprite[1]->SetMinVelocity(secondVec);
-        sprite[1]->SetAnimationDelay(.02f);
+        //sprite[1]->SetAnimationDelay(.02f);
     } else {
         secondVec.x = 1.4f;
         sprite[1]->SetMaxVelocity(secondVec);
         secondVec.x = -1.4f;
         sprite[1]->SetMinVelocity(secondVec);
-        sprite[1]->SetAnimationDelay(.05f);
+        //sprite[1]->SetAnimationDelay(.05f);
     }
-
+    
     //Press Jump button make mario jump
     if ( (pressed.x || pressed.jbutton2)
         && !sprite[1]->isFalling
         && !sprite[1]->isJumping
-        && !held.x ) {
+        ) {
         //std::cout << "jumpin woah there...\n";
         soundPlayer.play();
         sprite[1]->Jump();
@@ -218,15 +240,15 @@ void Idle() {
     
     //change jump height based on length of jump button hold
     vector2d_t  tempGravity;
-    if ( pressed.x || pressed.jbutton2 ) {
-        tempGravity.y = -2.8f;
+    if ( pressed.x|| held.jbutton2 ) {
+        tempGravity.y = -2.4f;
         sprite[1]->SetMaxGravity(tempGravity);
-        tempGravity.y = -0.07f;
+        tempGravity.y = -0.008f;
         sprite[1]->SetGravity(tempGravity);
     } else {
-        tempGravity.y = -2.8f;
+        tempGravity.y = -2.4f;
         sprite[1]->SetMaxGravity(tempGravity);
-        tempGravity.y = -0.2f;
+        tempGravity.y = -0.015f;
         sprite[1]->SetGravity(tempGravity);
     }
     
@@ -242,7 +264,61 @@ void Idle() {
     
     shift = sprite[2]->GetPosition();
     
-    sprite[1]->isColliding = sprite[1]->Colliding(*sprite[2]);
+    sprite[1]->Colliding(*sprite[2]);
+    /*
+    std::cout << "top: "
+    << sprite[1]->topCollision
+    << " bottom: " << sprite[1]->bottomCollision
+    << " left: " << sprite[1]->leftCollision
+    << " right: " << sprite[1]->rightCollision
+    << " collis: " << sprite[1]->isColliding << endl;
+    */
+    
+    if (sprite[1]->isColliding == false)
+    {
+        
+    }
+    
+    if (sprite[1]->isColliding){
+        if (sprite[1]->bottomCollision) {
+            sprite[1]->SetPosition(sprite[1]->GetPosition().x, sprite[2]->GetPosition().y - sprite[2]->GetSize().y , 0);
+            
+            sprite[1]->isJumping = false;
+            sprite[1]->isFalling = true;
+            tempVec.x = sprite[1]->GetVelocity().x;
+            tempVec.y = sprite[1]->GetMaxGravity().y/2;
+            sprite[1]->SetVelocity(tempVec);
+
+        }
+        
+        if (sprite[1]->topCollision) {
+            sprite[1]->SetPosition(sprite[1]->GetPosition().x, sprite[2]->GetPosition().y + sprite[1]->GetSize().y, 0);
+
+            sprite[1]->isJumping = false;
+            sprite[1]->isFalling = false;
+            tempVec.x = sprite[1]->GetVelocity().x;
+            tempVec.y = 0;
+            sprite[1]->SetVelocity(tempVec);
+
+        }
+        
+        if (sprite[1]->rightCollision) {
+            sprite[1]->SetPosition(sprite[2]->GetPosition().x + sprite[2]->GetSize().x, sprite[1]->GetPosition().y, 0);
+            tempVec.y = 0;
+
+        }
+        
+        
+        if (sprite[1]->leftCollision) {
+            sprite[1]->SetPosition(sprite[2]->GetPosition().x - sprite[1]->GetSize().x , sprite[1]->GetPosition().y, 0);
+            tempVec.y = 0;
+        }
+        
+    }
+    
+    if (sprite[1]->isColliding == false) {
+        //sprite[1]->isFalling = true;
+    }
     
     if ( collision.y < -0.62f ) {
         sprite[1]->isColliding = true;
@@ -267,24 +343,10 @@ void Idle() {
         }
     }
     
-    //press left or right
-    if ( pressed.kleft || pressed.jleft ) {
-        tempVec.x = -0.05f;
-        sprite[1]->direction = leftd;
-        sprite[1]->isAnimated = true;
-        sprite[1]->isStopping = false;
-
-    } else if( pressed.kright || pressed.jright) {
-        tempVec.x = 0.05f;
-        sprite[1]->direction = rightd;
-        sprite[1]->isAnimated = true;
-        sprite[1]->isStopping = false;
-    } else {
-        tempVec.x = 0.0f;
-        sprite[1]->isStopping = true;
-    } 
 
     sprite[1]->SetAcceleration( tempVec );
+    //std::cout << 1.5 - abs(sprite[1]->GetVelocity().x) << endl;
+    sprite[1]->SetAnimationDelay(1.5 - abs(sprite[1]->GetVelocity().x));
 
     
     //Rotate camera using WASD and parentheses
@@ -322,7 +384,6 @@ void Idle() {
     
     CalculateFPS();
     glutPostRedisplay();
-    CalculateDrawTime();
 }
 
 void Init(){
@@ -347,17 +408,21 @@ void Init(){
         std::cout << "Could not load file \n";
     }
     
-}
+};
 
 
 void Display() {
+    timeOfLastDraw = glutGet( GLUT_ELAPSED_TIME ) * .001;
+    
     glClear( GL_COLOR_BUFFER_BIT );
 
     glCallList( displayList );
-    
+
     glutSwapBuffers();
-    timeOfLastDraw = glutGet( GLUT_ELAPSED_TIME ) * .001;
     totalFramesRendered++;
+    CalculateDrawTime();
+    
+    
 }
 
 void Reshape(int w, int h) {
@@ -365,7 +430,6 @@ void Reshape(int w, int h) {
     glMatrixMode( GL_PROJECTION );
     glOrtho( 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 );
 }
-
 
 void SetScene() {
     glNewList( displayList, GL_COMPILE );
@@ -375,10 +439,10 @@ void SetScene() {
     
     
     glColor3f( 0.1f, 0.2f, 1.0f );
-    glutWireTeapot( 0.5f );
+    //glutWireTeapot( 0.5f );
     
     //TERRIBLE 60 frame cap code
-    glutWireSphere( 0.5f, 200, 200 );
+    //glutWireSphere( 0.5f, 200000, 200000 );
     
     //start textured drawing
     glEnable( GL_TEXTURE_2D );
@@ -420,7 +484,7 @@ void SetScene() {
 }
 
 void CalculateFPS() {
-    //std::cout << "FPS: " << FPS << "\n";
+   // std::cout << "FPS: " << FPS << "\n";
     curTime = glutGet( GLUT_ELAPSED_TIME ) * .001;
     
     deltaTime = curTime - lastTime;
@@ -429,12 +493,16 @@ void CalculateFPS() {
         lastTime = curTime;
         FPS = totalFramesRendered;
         totalFramesRendered = 0;
+        char buffer[100];
+        sprintf(buffer, "Super Mario Open - By Evan Chapman - FPS: %d", FPS);
+        windowTitle = buffer;
+        glutSetWindowTitle(windowTitle.c_str());
     }
 }
 
 void CalculateDrawTime() {
-    deltaDraw = glutGet( GLUT_ELAPSED_TIME ) * .001 - timeOfLastDraw;
-    //std::cout << "Draw time: " << deltaDraw << "\n";
+    deltaDraw = glutGet( GLUT_ELAPSED_TIME ) *.001 - timeOfLastDraw;
+    //std::cout << "Last Draw: "<< timeOfLastDraw << " current time: " << glutGet( GLUT_ELAPSED_TIME ) *.001 <<" Delta: " << deltaDraw << "\n";
 }
 
 void Animate(){
@@ -538,21 +606,20 @@ void Debug() {
     //dying right animation
     marioSprite->AddFrame("mariodying.png", dyingr);
     totalTextures++;
-    
-    
-    //Set mario facing right stopped
-    //marioSprite->SetAnimation(stoppedr);
+    marioSprite->SetLooping(true);
     
     vector2d_t tVec;
-    tVec.x = 0.06f;
+    
+    tVec.x = 0.004f;
     marioSprite->SetFriction(tVec);
+    
     tVec.x = 1.3f;
     marioSprite->SetMaxVelocity(tVec);
+    
     tVec.x = -1.5f;
     marioSprite->SetMinVelocity(tVec);
-    tVec.y = -0.1f;
-    marioSprite->SetGravity(tVec);
-    tVec.y = 4.0f;
+    
+    tVec.y = 3.5f;
     marioSprite->SetJumpStrength(tVec);
     
     //marioSprite->SetAnimation(1);
@@ -566,7 +633,7 @@ void Debug() {
     blockSprite->name = "Block";
     blockSprite->AddAnimation(blankAnimation);
     //blockSprite->SetAnimation(0);
-    blockSprite->SetAnimationDelay(0.07f);
+    blockSprite->SetAnimationDelay(0.10f);
     blockSprite->AddFrame("block1.png", 0);
     totalTextures++;
     blockSprite->AddFrame("block2.png", 0);
@@ -576,11 +643,26 @@ void Debug() {
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
     blockSprite->SetPosition(-.2, -.2, 0);
-    totalTextures++;
     blockSprite->SetSize(.2, .22, 0.0f);
-    totalTextures++;
-    
+    blockSprite->SetLooping(true);
+    blockSprite->isAnimated = true;
     sprite.push_back(blockSprite);
+    
+    
+    for (int i = 0 ; i < 10 ; i++) {
+        blockSprite = new Sprite();
+        char buffer[20]  ;
+        sprintf(buffer, "tile %d",i);
+        blockSprite->name = buffer;
+        blockSprite->AddAnimation(blankAnimation);
+        //blockSprite->SetAnimation(0);
+        blockSprite->SetAnimationDelay(0.10f);
+        blockSprite->AddFrame("tile1.png", 0);
+        totalTextures++;
+        blockSprite->SetPosition(-.8 + i *.1, -.85, 0);
+        blockSprite->SetSize(.1, 0.1, 0.0f);
+        sprite.push_back(blockSprite);
+        }
     }
 
 

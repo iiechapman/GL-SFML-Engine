@@ -25,7 +25,6 @@ typedef struct dimensions_s{
     float x;
     float y;
     float z;
-    float w;
 } dimensions_t;
 
 typedef struct buttons_s{

@@ -16,7 +16,7 @@ buttons_t held;
 buttons_t released;
 
 void Keyboard( unsigned char key,int x, int y ) {
-    std::cout << "Key: " << key << "\n";
+   // std::cout << "Key: " << key << "\n";
     switch ( key ) {
         case kesc:
             if (pressed.escape){
@@ -69,9 +69,12 @@ void Keyboard( unsigned char key,int x, int y ) {
         case 'x':
             if (pressed.x) {
                 held.x = true;
+                //std::cout << "Held x \n";
             } else {
                 pressed.x = true;
+                //std::cout << "Pressed x \n";
             }
+
             break;
             
         case 'f':
@@ -142,6 +145,9 @@ void KeyboardUp( unsigned char key, int x, int y ) {
             pressed.f = false;
             held.f = false;
             break;
+        
+        default:
+            break;
             
     }
 }
@@ -175,6 +181,7 @@ void SpecialKey( int key, int x, int y ) {
         default:
             break;
     }
+    
     if ( glutGetModifiers() == GLUT_ACTIVE_SHIFT ) {
         pressed.shift = true;
     } else {
@@ -263,7 +270,6 @@ void Joystick(unsigned int buttonMask,int x, int y, int z) {
         pressed.jbutton2 = false;
         held.jbutton2 = false;
     }
-    
     
   // std::cout << "Joy: " << buttonMask << "\n";
 }

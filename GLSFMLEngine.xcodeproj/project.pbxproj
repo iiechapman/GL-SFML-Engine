@@ -91,7 +91,6 @@
 				4EA1F20B16F138B70046C5A9 /* Input */,
 				4EEB516C16F1159F0053EB4F /* Support */,
 				4EEB516B16EFFE1B0053EB4F /* Sprite */,
-				4E64DD9D16DD3C250027065F /* main.cpp */,
 			);
 			path = GLSFMLEngine;
 			sourceTree = "<group>";
@@ -113,6 +112,7 @@
 				4EC167C116ECF25700ADEE26 /* Sprite.h */,
 				4EC167BE16ECDB1D00ADEE26 /* TextureHandler.h */,
 				4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */,
+				4E64DD9D16DD3C250027065F /* main.cpp */,
 			);
 			name = Sprite;
 			sourceTree = "<group>";
