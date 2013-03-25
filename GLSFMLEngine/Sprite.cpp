@@ -6,6 +6,7 @@
 //  Copyright (c) 2013 Evan Chapman. All rights reserved.
 //
 
+#include <cmath>
 #include "Sprite.h"
 
 /*
@@ -68,6 +69,7 @@ Sprite::Sprite() {
     
     direction = leftd;
     R=G=B= 1.5f;
+    CalculateSides();
 }
 
 
@@ -215,6 +217,7 @@ void Sprite::SetPosition(float x, float y, float z) {
     position.x = x;
     position.y = y;
     position.z = z;
+    CalculateSides();
 }
 
 
@@ -222,6 +225,7 @@ void Sprite::SetSize(float x, float y, float z) {
     size.x = x;
     size.y = y;
     size.z = z;
+    CalculateSides();
 }
 
 //Updates + Physics
@@ -231,37 +235,32 @@ void Sprite::Update(float deltaTime) {
     velocity.x += acceleration.x;
     velocity.y += acceleration.y;
     
-    
-    if (velocity.y == 0) {
-        stoppedJumping = true;
+    if ( (isJumping || isFalling) && velocity.y !=0 && !stoppedJumping ) {
+        switch (direction) {
+            case leftd:
+                SetAnimation(jumpingl);
+                break;
+                
+            case rightd:
+                SetAnimation(jumpingr);
+                break;
+                
+            default:
+                break;
+        }
     }
-    
-    if (velocity.x !=0 && velocity.y != 0)
-    {
-        isStopped = false;
-       // std::cout << "HELLO";
-    } else {
-        isStopped = true;
-    }
-    //std::cout << isStopped;
 
-    if (!isColliding && !isJumping && !isFalling && !isStopped) {
-        //isFalling = true;
-       // std::cout << "stoppping? \n";
-    }
+    isStopped =  (velocity.x !=0 && velocity.y != 0);
     
     //if jumping, apply gravity
-    if ( isJumping ) {
+    if ( isJumping || isFalling ) {
         if ( velocity.y < maxGravity.y ) {
             isJumping = false;
             isFalling = true;
             velocity.y = maxGravity.y;
-            //std::cout << "is falling? " << isFalling << "is jumping? " << isJumping << "\n";
         }
         velocity.y += gravity.y;
-        //std::cout << "Up up and away! \n";
     }
-    
     
     if ( isStopping ) {
         if ( velocity.x > 0 ) {
@@ -285,11 +284,11 @@ void Sprite::Update(float deltaTime) {
         }
     }
 
-    
-    if ( velocity.x > 0 ) {
+    if ( velocity.x != 0 && velocity.y !=0) {
         isStopped = false;
+    } else {
+        isStopped = true;
     }
-    
     
     //stopped animation
     if (isStopped){
@@ -307,7 +306,7 @@ void Sprite::Update(float deltaTime) {
     }
     
     //running left and right
-    if ( velocity.x != 0 ) {
+    if ( velocity.x != 0  && (!isJumping && !isFalling)) {
         switch (direction) {
             case leftd:
                 SetAnimation(runningl);
@@ -350,21 +349,6 @@ void Sprite::Update(float deltaTime) {
         velocity.y = minVelocity.y;
     }
     
-    if ( isJumping || isFalling ) {
-        switch (direction) {
-            case leftd:
-                SetAnimation(jumpingl);
-                break;
-                
-            case rightd:
-                SetAnimation(jumpingr);
-                break;
-                
-            default:
-                break;
-        }
-    }
-    
     if (isColliding && (velocity.x == 0 || velocity.y == 0)) {
         isColliding = false;
     }
@@ -372,6 +356,7 @@ void Sprite::Update(float deltaTime) {
     //Final Movement Vector
     position.x += (velocity.x) * deltaTime;
     position.y += (velocity.y) * deltaTime;
+    CalculateSides();
 }
 
 void Sprite::Jump() {
@@ -458,7 +443,6 @@ dimensions_t Sprite::GetOverlapPos() {
     return overlapPos;
 }
 
-
 bool Sprite::Turning() {
     return isTurning;
 }
@@ -473,48 +457,57 @@ bool Sprite::IsBoundary() {
 
 bool Sprite::Colliding(Sprite& rhs) {
     if ( rhs.IsBoundary()) {
-        if (    position.x + size.x > rhs.position.x
-            &&  position.x < rhs.position.x + rhs.size.x
-            &&  position.y > rhs.position.y - rhs.size.y
-            &&  position.y - size.y < rhs.position.y ) {
-                isColliding = true;
-                overlapPos = rhs.GetPosition();
-                overlapSize = rhs.GetSize();
-        
-            if (position.y > rhs.position.y && velocity.y <0) {
-                topCollision = true;
-                rightCollision = false;
-                leftCollision = false;
-                bottomCollision = false;
+        if (   right > rhs.left
+            &&  left < rhs.right
+            &&  top > rhs.bottom
+            &&  bottom < rhs.top ) {
+            
+            isColliding = true;
+            overlapPos = rhs.GetPosition();
+            overlapSize = rhs.GetSize();
+            
+            float penTop,penBottom,penRight,penLeft;
+            penTop      = rhs.top - bottom;
+            penBottom   = top - rhs.bottom;
+            penLeft     = right - rhs.left;
+            penRight    = rhs.right - left;
+            
+            topCollision    = (penTop < penBottom) && (penTop < penLeft) && (penTop < penRight);
+            bottomCollision = (penBottom < penTop) && (penBottom < penLeft) && (penBottom < penRight);
+            leftCollision   = (penLeft < penTop) && (penLeft < penBottom) && (penLeft < penRight);
+            rightCollision  = (penRight < penTop) && (penRight < penBottom) && (penRight < penLeft);
+            
+            if (bottomCollision ) {
+                position.y = rhs.bottom;
+                topCollision = rightCollision = leftCollision = false;
             }
             
-            if (position.y - size.y > rhs.position.y - rhs.size.y && velocity.y > 0) {
-                bottomCollision = true;
-                rightCollision = false;
-                leftCollision = false;
-                topCollision = false;
+            if (topCollision ) {
+                position.y = rhs.top + size.y;
+                bottomCollision = rightCollision = leftCollision = false;
             }
             
-            if (position.x + size.x > rhs.position.x + rhs.size.x && velocity.x < 0) {
-                rightCollision = true;
-                leftCollision = false;
-                topCollision = false;
-                bottomCollision = false;
-            }
-
-            if (position.x < rhs.position.x && velocity.x >0) {
-                leftCollision = true;
-                rightCollision = false;
-                topCollision = false;
-                bottomCollision = false;
+            if (leftCollision) {
+                position.x = rhs.left - size.x;
+                topCollision = bottomCollision = rightCollision = false;
             }
         
+            if (rightCollision) {
+                position.x = rhs.right;
+                topCollision = bottomCollision = leftCollision = false;
+            }
+            
         }
     }
     return isColliding;
 }
 
-
+void Sprite::CalculateSides(){
+    top     = position.y;
+    bottom  = top - size.y;
+    left    = position.x;
+    right   = left + size.x;
+}
 
 
 

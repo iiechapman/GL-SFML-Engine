@@ -120,9 +120,11 @@ class Sprite {
     unsigned long currentFrameIndex;
     int currentAnimation;
     bool isLooping;
-    bool isBoundary;
     float animationDelay;
     float animationDelayTotal;
+    
+    bool isBoundary;
+    float top,bottom,left,right;
     
     float R,G,B;
     
@@ -146,6 +148,8 @@ class Sprite {
     dimensions_t overlapSize;
     
     TextureHandler texture;
+    
+    void CalculateSides();
     
 };
 
