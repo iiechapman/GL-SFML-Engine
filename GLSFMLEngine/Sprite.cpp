@@ -26,6 +26,7 @@ Sprite::Sprite() {
     isDying = false;
     stoppedJumping = false;
     isLooping = false;
+    isBoundary = false;
     
     numberOfAnimations = 0;
     animationDelay = 0;
@@ -71,7 +72,7 @@ Sprite::Sprite() {
 
 
 Sprite::~Sprite() {
-    //animation.index.clear();
+    std::cout << "Deleted " << name << endl;
 }
 
 
@@ -121,7 +122,7 @@ void Sprite::AddFrame(const std::string& filename, int animationIndex ) {
     if ( textureID == 0 ) {
         textureID = 1;
     }
-    animation.index[animationIndex].push_back(textureID);
+    animIndex[animationIndex].push_back(textureID);
 }
 
 
@@ -133,7 +134,7 @@ void Sprite::AddFrame(const std::string& filename, int animationIndex ) {
  ===============
  */
 void Sprite::AddAnimation(vector<int> newAnimation) {
-    animation.index.push_back( newAnimation );
+    animIndex.push_back( newAnimation );
     numberOfAnimations++;
 }
 
@@ -142,7 +143,7 @@ void Sprite::AddAnimation(vector<int> newAnimation) {
  Remove chunk of animation frames
  */
 void Sprite::RemoveAnimation(int indexToRemove) {
-    animation.index.erase(animation.index.begin() + indexToRemove );
+    animIndex.erase(animIndex.begin() + indexToRemove );
     numberOfAnimations--;
 }
 
@@ -183,7 +184,7 @@ void Sprite::Animate(float deltaTime) {
         currentFrameIndex++;
     }
     
-    unsigned long lastFrame = animation.index[currentAnimation].size() -1;
+    unsigned long lastFrame = animIndex[currentAnimation].size() -1;
     
     //if the current frame is outside the last frame 
     if (currentFrameIndex > lastFrame) {
@@ -194,7 +195,7 @@ void Sprite::Animate(float deltaTime) {
         }
     }
     //Current frame of animation is index selected in current animation
-    currentFrame = animation.index[currentAnimation][currentFrameIndex];
+    currentFrame = animIndex[currentAnimation][currentFrameIndex];
 }
 
 void Sprite::StopAnimation() {
@@ -341,6 +342,14 @@ void Sprite::Update(float deltaTime) {
         velocity.x = minVelocity.x;
     }
     
+    if ( velocity.y > maxVelocity.y ) {
+        velocity.y = maxVelocity.y;
+    }
+    
+    if ( velocity.y < minVelocity.y ) {
+        velocity.y = minVelocity.y;
+    }
+    
     if ( isJumping || isFalling ) {
         switch (direction) {
             case leftd:
@@ -356,15 +365,8 @@ void Sprite::Update(float deltaTime) {
         }
     }
     
-    //If collision, stop jumping
-    if ( isColliding && (velocity.x >0 || velocity.y > 0)) {
-        isJumping = false;
-        isFalling = false;
-        velocity.y = 0.0f;
-        velocity.x = 0.0f;
-        acceleration.x = 0.0f;
+    if (isColliding && (velocity.x == 0 || velocity.y == 0)) {
         isColliding = false;
-        //std::cout << "Is colliding! \n";
     }
     
     //Final Movement Vector
@@ -416,7 +418,6 @@ void Sprite::SetJumpStrength(vector2d_t newJumpStrength) {
 }
 
 //Getters
-
 vector2d_t Sprite::GetVelocity() {
     return velocity;
 }
@@ -429,6 +430,18 @@ vector2d_t Sprite::GetMaxGravity() {
     return maxGravity;
 }
 
+vector2d_t Sprite::GetMaxVelocity() {
+    return maxVelocity;
+}
+
+vector2d_t Sprite::GetMinVelocity() {
+    return minVelocity;
+}
+
+vector2d_t Sprite::GetJumpStrength() {
+    return jumpStrength;
+}
+
 dimensions_t Sprite::GetPosition() {
     return position;
 }
@@ -437,63 +450,69 @@ dimensions_t Sprite::GetSize() {
     return size;
 }
 
+dimensions_t Sprite::GetOverlapSize() {
+    return overlapSize;
+}
+
+dimensions_t Sprite::GetOverlapPos() {
+    return overlapPos;
+}
+
+
 bool Sprite::Turning() {
     return isTurning;
 }
 
+void Sprite::IsBoundary(bool flag) {
+    isBoundary = flag;
+}
+
+bool Sprite::IsBoundary() {
+    return isBoundary;
+}
 
 bool Sprite::Colliding(Sprite& rhs) {
-    if (position.x  > rhs.position.x + rhs.size.x)
-    {
-        rightCollision = true;
-        leftCollision = false;
-        topCollision = false;
-        bottomCollision = false;
-    } else {
-        //rightCollision = false;
-    }
-    
-    if (position.x + size.x < rhs.position.x){
-        leftCollision = true;
-        rightCollision = false;
-        topCollision = false;
-        bottomCollision = false;
-    
-    }else
-    {// leftCollision = false;
-    }
-    
-    if (position.y - size.y > rhs.position.y)   {
-        topCollision = true;
-        rightCollision = false;
-        leftCollision = false;
-        bottomCollision = false;
-    }else
-    { //topCollision = false;
-    }
-    
-    if (position.y < rhs.position.y - rhs.size.y ){
-        bottomCollision = true;
-        rightCollision = false;
-        leftCollision = false;
-        topCollision = false;
-    }else
-    { //bottomCollision = false;
-    }
-
-    if (    position.x + size.x >= rhs.position.x
-        &&  position.x <= rhs.position.x + rhs.size.x
-        &&  position.y >= rhs.position.y - rhs.size.y
-        &&  position.y - size.y <= rhs.position.y ) {
-        //std::cout <<"colliding \n   ";
-        isColliding = true;
-//        return isColliding;
+    if ( rhs.IsBoundary()) {
+        if (    position.x + size.x > rhs.position.x
+            &&  position.x < rhs.position.x + rhs.size.x
+            &&  position.y > rhs.position.y - rhs.size.y
+            &&  position.y - size.y < rhs.position.y ) {
+                isColliding = true;
+                overlapPos = rhs.GetPosition();
+                overlapSize = rhs.GetSize();
         
-    } else 
-    isColliding = false;
-    return isColliding;
-    }
+            if (position.y > rhs.position.y && velocity.y <0) {
+                topCollision = true;
+                rightCollision = false;
+                leftCollision = false;
+                bottomCollision = false;
+            }
+            
+            if (position.y - size.y > rhs.position.y - rhs.size.y && velocity.y > 0) {
+                bottomCollision = true;
+                rightCollision = false;
+                leftCollision = false;
+                topCollision = false;
+            }
+            
+            if (position.x + size.x > rhs.position.x + rhs.size.x && velocity.x < 0) {
+                rightCollision = true;
+                leftCollision = false;
+                topCollision = false;
+                bottomCollision = false;
+            }
 
+            if (position.x < rhs.position.x && velocity.x >0) {
+                leftCollision = true;
+                rightCollision = false;
+                topCollision = false;
+                bottomCollision = false;
+            }
+        
+        }
+    }
+    return isColliding;
+}
 
 
 

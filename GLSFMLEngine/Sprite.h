@@ -20,11 +20,6 @@
 
 using namespace std;
 
-typedef struct animation_s{
-    vector<vector<int>> index;
-} animation_t ;
-
-
 typedef enum {
     stoppedl,
     stoppedr,
@@ -64,7 +59,6 @@ class Sprite {
     bool isHurt;
     bool isDying;
     bool stoppedJumping;
-    
     bool topCollision;
     bool bottomCollision;
     bool leftCollision;
@@ -90,8 +84,15 @@ class Sprite {
     
     vector2d_t GetVelocity();
     dimensions_t GetPosition();
+    dimensions_t GetSize();
+    dimensions_t GetOverlapPos();
+    dimensions_t GetOverlapSize();
     vector2d_t  GetGravity();
     vector2d_t  GetMaxGravity();
+    vector2d_t GetJumpStrength();
+    vector2d_t GetMaxVelocity();
+    vector2d_t GetMinVelocity();
+    
     bool Turning();
     
     
@@ -108,16 +109,18 @@ class Sprite {
     void SetColor(float red, float green, float blue);
     void SetPosition ( float x,float y ,float z );
     void SetSize (float x, float y, float z);
-    dimensions_t GetSize();
-
+    
+    void IsBoundary(bool flag);
+    bool IsBoundary();
     bool Colliding(Sprite& rhs);
     
     private:
-    animation_t animation;
+    vector<vector<int>> animIndex;
     GLuint currentFrame;
     unsigned long currentFrameIndex;
     int currentAnimation;
     bool isLooping;
+    bool isBoundary;
     float animationDelay;
     float animationDelayTotal;
     
@@ -139,6 +142,8 @@ class Sprite {
     
     dimensions_t position;
     dimensions_t size;
+    dimensions_t overlapPos;
+    dimensions_t overlapSize;
     
     TextureHandler texture;
     
