@@ -258,7 +258,7 @@ void SetScene() {
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     
     //Start Object Drawing
-    for ( vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; ++i ) {
+    for ( auto i = sprite.begin() ; i != sprite.end() ; ++i ) {
         (*i)->Draw();
     }
     
@@ -310,13 +310,13 @@ void CalculateDrawTime() {
 }
 
 void Update() {
-    for (vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; ++i ){
+    for (auto i = sprite.begin() ; i != sprite.end() ; ++i ){
         (*i)->Update(deltaDraw);
     }
 }
 
 void Animate(){
-    for (vector<Sprite*>::iterator i = sprite.begin() ; i != sprite.end() ; i++ ){
+    for (auto i = sprite.begin() ; i != sprite.end() ; i++ ){
         (*i)->Animate(deltaDraw);
     }
 }
@@ -407,7 +407,7 @@ void CheckInput() {
     if ( pressed.x|| held.jbutton2 ) {
         tempGravity.y = -2.4f;
         mario->SetMaxGravity(tempGravity);
-        tempGravity.y = -0.002f;
+        tempGravity.y = -0.003f;
         mario->SetGravity(tempGravity);
     } else {
         tempGravity.y = -2.4f;
@@ -454,7 +454,7 @@ void ControlCamera() {
 }
 
 void CheckCollisions() {
-    for (vector<Sprite*>::iterator i = sprite.begin() ; i < sprite.end() ; i++ ) {
+    for (auto i = sprite.begin() ; i < sprite.end() ; i++ ) {
         Sprite* test = (*i);
         if (test == mario) {
             continue;
@@ -469,7 +469,7 @@ void CheckCollisions() {
     if (didCollide){
             cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
         if (mario->bottomCollision) {
-            mario->isJumping = false;
+            //mario->isJumping = false;
             mario->isFalling = true;
             tempVec.x = mario->GetVelocity().x;
             tempVec.y = mario->GetMaxGravity().y/2;
@@ -715,13 +715,14 @@ void LoadObjects() {
 //Console text output used for debugging
 void Console() {
     //cout << "Jump " << mario->isJumping << endl << "Fall: " << mario->isFalling << endl;
-    cout << "Vel X: " << mario->GetVelocity().x << endl << "Vel Y: " << mario->GetVelocity().y << endl;
+    //cout << "Vel X: " << mario->GetVelocity().x << endl << "Vel Y: " << mario->GetVelocity().y << endl;
     //cout << "JSy: " << mario->GetJumpStrength().y << endl;
     //cout << "MaxVx " << mario->GetMaxVelocity().x << endl;
     //cout << "MaxVy " << mario->GetMaxVelocity().y << endl;
     //cout << "Coll: " << mario->isColliding << endl;
 //    cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
     //cout << "Did collide: " << didCollide << endl;
+    cout << "sjump " << mario->stoppedJumping << endl;
 }
 
 

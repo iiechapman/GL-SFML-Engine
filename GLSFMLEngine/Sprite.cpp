@@ -234,29 +234,15 @@ void Sprite::SetSize(float x, float y, float z) {
 void Sprite::Update(float deltaTime) {
     velocity.x += acceleration.x;
     velocity.y += acceleration.y;
-    
-    if ( (isJumping || isFalling) && velocity.y !=0 && !stoppedJumping ) {
-        switch (direction) {
-            case leftd:
-                SetAnimation(jumpingl);
-                break;
-                
-            case rightd:
-                SetAnimation(jumpingr);
-                break;
-                
-            default:
-                break;
-        }
-    }
 
-    isStopped =  (velocity.x !=0 && velocity.y != 0);
+   // isStopped =  (velocity.x !=0 && velocity.y != 0);
     
     //if jumping, apply gravity
     if ( isJumping || isFalling ) {
         if ( velocity.y < maxGravity.y ) {
             isJumping = false;
             isFalling = true;
+            stoppedJumping = false;
             velocity.y = maxGravity.y;
         }
         velocity.y += gravity.y;
@@ -268,8 +254,9 @@ void Sprite::Update(float deltaTime) {
             if ( velocity.x < 0 ) {
                 velocity.x = 0;
                 isStopping = false;
-                if (!isJumping){
+                if (!isJumping && !isFalling){
                     isStopped = true;
+                    //stoppedJumping = true;
                 }
             }
         } else if ( velocity.x < 0 ) {
@@ -277,8 +264,9 @@ void Sprite::Update(float deltaTime) {
             if ( velocity.x >= 0 ) {
                 velocity.x = 0;
                 isStopping = false;
-                if (!isJumping){
+                if (!isJumping && !isFalling){
                     isStopped = true;
+                    //stoppedJumping = true;
                 }
             }
         }
@@ -286,8 +274,9 @@ void Sprite::Update(float deltaTime) {
 
     if ( velocity.x != 0 && velocity.y !=0) {
         isStopped = false;
-    } else {
+    } else  if ( velocity.x == 0 && velocity.y ==0) {
         isStopped = true;
+        stoppedJumping = true;
     }
     
     //stopped animation
@@ -351,6 +340,21 @@ void Sprite::Update(float deltaTime) {
     
     if (isColliding && (velocity.x == 0 || velocity.y == 0)) {
         isColliding = false;
+    }
+    
+    if ( (isJumping || isFalling) && !stoppedJumping) {
+        switch (direction) {
+            case leftd:
+                SetAnimation(jumpingl);
+                break;
+                
+            case rightd:
+                SetAnimation(jumpingr);
+                break;
+                
+            default:
+                break;
+        }
     }
     
     //Final Movement Vector
@@ -484,8 +488,7 @@ bool Sprite::Colliding(Sprite& rhs) {
             
             if (topCollision ) {
                 position.y = rhs.top + size.y;
-                bottomCollision = rightCollision = leftCollision = false;
-            }
+                bottomCollision = rightCollision = leftCollision = false;            }
             
             if (leftCollision) {
                 position.x = rhs.left - size.x;
