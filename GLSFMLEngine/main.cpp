@@ -33,9 +33,9 @@ vector2d_t secondVec;
 GLuint totalTextures;
 
 const int MAX_FPS = 60;
-bool PLAYMUSIC = false;
+bool PLAYMUSIC = true;
 bool DEPTH_ENABLED = false;
-bool FULLSCREEN = false;
+bool FULLSCREEN = true;
 string windowTitle = "Super Mario Open - By Evan Chapman";
 string title = "Super Mario Open - By Evan Chapman";
 bool running;
@@ -43,10 +43,24 @@ bool falling;
 bool jumping;
 bool stopped;
 bool didCollide;
+bool allowJump = false;
 
 dimensions_t    position;
 dimensions_t    deltaPosition;
 dimensions_t    size;
+
+//Window constants
+const float WINDOWWIDTH     = 1024;
+const float WINDOWHEIGHT    = 768;
+const float WINDOWPOSX      = 300;
+const float WINDOWPOSY      = 300;
+const float ASPECTRATIO = WINDOWWIDTH / WINDOWHEIGHT;
+
+//Camera variables
+const float turnAngle = 100;
+const float turnAmount = 10;
+float CAMERAOFFSET = 0.0f;
+
 
 //tile variables
 dimensions_t tilePos;
@@ -60,7 +74,7 @@ float animDelta         = 0.0f;
 float animLastTime      = 0.0f;
 
 //time vars
-float   delta             = .0025f;
+unsigned long long   delta   = 0.002f;
 float   lastTime          =  0.0f;
 float   curTime           =  0.0f;
 float   deltaTime         =  0.0f;
@@ -72,18 +86,31 @@ const float BACKGROUNDWIDTH     =   2.0f;
 const float BACKGROUNDHEIGHT    =   2.0f;
 const float BACKGROUNDX         =  -1.0f;
 const float BACKGROUNDY         =   1.0f;
+const float SCROLLRIGHT         =   .06f;
+const float SCROLLLEFT          =   -0.3;
 
 const float MARIOX          = -.5;
 const float MARIOY          = -.62;
 const float MARIOWIDTH      = .13;
 const float MARIOHEIGHT     = .15;
 const float MARIOANIMDELAY  = .04;
-const float MARIOFRICTIONX  = .004f;
-const float MARIOMAXY = 10.0f;
-const float MARIOMAXX = 1.3f;
-const float MARIOMINX = -1.5f;
-const float MARIOMINY = -10.0f;
-const float MARIOJUMP = 2.5f;
+
+const float MARIOFRICTIONX  = 1.8f;
+
+const float MARIOACCEL      = 4.0f;
+const float MARIOMAXVELX    = 0.9f;
+const float MARIOMAXVELY    = 6.0f;
+const float MARIORUNDIFF    = 0.5f;
+
+const float MARIOJUMP       =  2.5f;
+const float MARIOGRAV       = -10.0f;
+const float MARIOMAXGRAV    = -2.5f;
+
+const float MARIOHIGHJUMPGRAV       = MARIOGRAV + 4 ;
+const float MARIOHIGHJUMPMAXGRAV    = MARIOMAXGRAV;
+
+const float MARIODEADGRAV           = MARIOGRAV + 5;
+const float MARIODEADMAXGRAV        = MARIOMAXGRAV + .5;
 
 const float BLOCKX          = -.4;
 const float BLOCKY          = -.2;
@@ -155,8 +182,8 @@ int main ( int argc,char ** argv ) {
     cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowPosition( 200, 200 );
-    glutInitWindowSize( 1024, 768 );
+    glutInitWindowPosition( WINDOWPOSX, WINDOWPOSY );
+    glutInitWindowSize( WINDOWWIDTH, WINDOWHEIGHT );
     glutGameModeString("1024x768:32");
     if ( !FULLSCREEN ) {
         
@@ -165,7 +192,7 @@ int main ( int argc,char ** argv ) {
         glutCreateWindow( windowTitle.c_str() );
         glutFullScreen();
     }
-    glClearColor( 0.0f, 0.37f, 0.71f, 0.0f );
+    glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
     glutDisplayFunc( Display );
     glutReshapeFunc( Reshape );
     glutIdleFunc( Idle );
@@ -185,13 +212,13 @@ int main ( int argc,char ** argv ) {
 }
 
 void Idle() {
-    CheckCollisions();
     CheckInput();
-    ControlCamera();
     Update();
     Animate();
+    CheckCollisions();
     SetScene();
     CalculateFPS();
+    ControlCamera();
     glutPostRedisplay();
     Console();
 }
@@ -242,8 +269,15 @@ void Display() {
 void Reshape(int w, int h) {
     glViewport( 0, 0, (GLsizei)w, (GLsizei)h );
     glMatrixMode( GL_PROJECTION );
-    glOrtho( 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 );
+    glLoadIdentity();
+    if (FULLSCREEN){
+     gluOrtho2D( -1.0 * ASPECTRATIO , 1.0 * ASPECTRATIO, -1.0 , 1.0);
+    }
+    if (!FULLSCREEN){
+        gluOrtho2D( -1.0  , 1.0 , -1.0 , 1.0);
+    }
 }
+
 
 void SetScene() {
     glNewList( displayList, GL_COMPILE );
@@ -346,26 +380,36 @@ void CheckInput() {
         exit(0);
     }
     
-    if ( pressed.f && held.f != true ) {
-        if (FULLSCREEN){
-            glutReshapeWindow(1024, 768 );
-            glutPositionWindow(600, 300 );
-            FULLSCREEN = false;
-        } else {
-            FULLSCREEN = true;
-            glutFullScreen();
-        }
-        
+    //Reset Mario at will
+    if (pressed.r) {
+        mario->Reset();
+        mario->SetPosition(MARIOX, MARIOY, 0);
+        titleSong.openFromFile("overworld.ogg");
+        titleSong.play();
     }
+    
+    if (pressed.m) {
+        glutReshapeWindow(WINDOWWIDTH, WINDOWHEIGHT );
+        glutPositionWindow(WINDOWPOSX, WINDOWPOSY );
+        FULLSCREEN = false;
+    }
+    
+    if (pressed.f) {
+        FULLSCREEN = true;
+        glutFullScreen();
+        glLoadIdentity();
+        gluOrtho2D( -1.0 * ASPECTRATIO , 1.0 * ASPECTRATIO, -1.0 , 1.0);
+    }
+    
     //press left or right
-    if ( pressed.kleft || pressed.jleft ) {
-        tempVec.x = -0.009f;
+    if ( (pressed.kleft || pressed.jleft) && !mario->isDead ) {
+        tempVec.x = -MARIOACCEL;
         mario->direction = leftd;
         mario->isAnimated = true;
         mario->isStopping = false;
         
-    } else if( pressed.kright || pressed.jright) {
-        tempVec.x = 0.009f;
+    } else if((pressed.kright || pressed.jright) && !mario->isDead) {
+        tempVec.x = MARIOACCEL;
         mario->direction = rightd;
         mario->isAnimated = true;
         mario->isStopping = false;
@@ -376,26 +420,31 @@ void CheckInput() {
     
     //Press run button
     if (pressed.shift || held.jbutton1 || pressed.z) {
-        secondVec.x = 1.8f;
-        secondVec.y = mario->GetMaxVelocity().y;
+        secondVec.x = MARIOMAXVELX + MARIORUNDIFF;
+        secondVec.y = MARIOMAXVELY;
         mario->SetMaxVelocity(secondVec);
-        secondVec.x = -1.8f;
-        secondVec.y = mario->GetMinVelocity().y;
+        secondVec.x = -MARIOMAXVELX - MARIORUNDIFF;
+        secondVec.y = -MARIOMAXVELY;
         mario->SetMinVelocity(secondVec);
     } else {
-        secondVec.x = 1.4f;
-        secondVec.y = mario->GetMaxVelocity().y;
+        secondVec.x = MARIOMAXVELX;
+        secondVec.y = MARIOMAXVELY;
         mario->SetMaxVelocity(secondVec);
-        secondVec.x = -1.4f;
-        secondVec.y = mario->GetMinVelocity().y;
+        secondVec.x = -MARIOMAXVELX;
+        secondVec.y = -MARIOMAXVELY;
         mario->SetMinVelocity(secondVec);
+    }
+    
+    //Reset marios ability to jump
+    if ((mario->topCollision) && !allowJump && !pressed.x) {
+            allowJump = true;
     }
     
     //Press Jump button make mario jump
     if ( (pressed.x || pressed.jbutton2)
-        && !mario->isFalling
-        && !mario->isJumping
+        && allowJump
         ) {
+        allowJump = false;
         jumpSound.play();
         mario->Jump();
     } else {
@@ -404,15 +453,22 @@ void CheckInput() {
     
     //change jump height based on length of jump button hold
     vector2d_t  tempGravity;
-    if ( pressed.x|| held.jbutton2 ) {
-        tempGravity.y = -2.4f;
+    if ( pressed.x || held.jbutton2) {
+        tempGravity.y = MARIOHIGHJUMPMAXGRAV;
         mario->SetMaxGravity(tempGravity);
-        tempGravity.y = -0.003f;
+        tempGravity.y = MARIOHIGHJUMPGRAV + (mario->GetVelocity().x /2 );
         mario->SetGravity(tempGravity);
     } else {
-        tempGravity.y = -2.4f;
+        tempGravity.y = MARIOMAXGRAV;
         mario->SetMaxGravity(tempGravity);
-        tempGravity.y = -0.009f;
+        tempGravity.y = MARIOGRAV +  (mario->GetVelocity().x /2 ) ;
+        mario->SetGravity(tempGravity);
+    }
+    
+    if (mario->isDead) {
+        tempGravity.y = MARIODEADMAXGRAV;
+        mario->SetMaxGravity(tempGravity);
+        tempGravity.y = MARIODEADGRAV;
         mario->SetGravity(tempGravity);
     }
     
@@ -421,39 +477,104 @@ void CheckInput() {
             skidSound.play();
         }
     }
+    
+    if (pressed.plus) {
+        mario->SetPosition(mario->GetPosition().x, mario->GetPosition().y, mario->GetPosition().z + deltaDraw);
+    }
+    if (pressed.minus) {
+        mario->SetPosition(mario->GetPosition().x, mario->GetPosition().y, mario->GetPosition().z - deltaDraw);
+    }
+    
+    //if mario moves past scroll section
+    if (mario->GetPosition().x > SCROLLRIGHT) {
+        float scrollShift = mario->GetPosition().x - SCROLLRIGHT ;
+        CAMERAOFFSET -= scrollShift;
+        mario->SetPosition(SCROLLRIGHT, mario->GetPosition().y, mario->GetPosition().z);
+        for (auto i = sprite.begin() ; i != sprite.end(); i++ ) {
+            Sprite* object = *i;
+            if (object->isScrolling) {
+                object->SetPosition(object->GetPosition().x- scrollShift, object->GetPosition().y, object->GetPosition().z);
+            }
+        }
+    }
+    
+    if (mario->GetPosition().x < SCROLLLEFT) {
+        float scrollShift = mario->GetPosition().x - SCROLLLEFT ;
+        CAMERAOFFSET += scrollShift;
+        mario->SetPosition(SCROLLLEFT, mario->GetPosition().y, mario->GetPosition().z);
+        for (auto i = sprite.begin() ; i != sprite.end(); i++ ) {
+            Sprite* object = *i;
+            if (object->isScrolling) {
+                object->SetPosition(object->GetPosition().x - scrollShift, object->GetPosition().y, object->GetPosition().z);
+            }
+        }
+    }
+    
     mario->SetAcceleration( tempVec );
-    mario->SetAnimationDelay(1.5 - abs(mario->GetVelocity().x));
+    mario->SetAnimationDelay(.98 - abs(mario->GetVelocity().x));
     
 }
 
 void ControlCamera() {
     //Rotate camera using WASD and parentheses
+    float angle = 0.0f;
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    
+    //rotate about Z axis
     if ( pressed.rbracket ) {
-        glRotatef(1, 0.0f,0.0f, delta/1000);
+        angle = -turnAngle;
+        z = turnAmount;
     }
     
     if ( pressed.lbracket ) {
-        glRotatef(1, 0.0f,0.0f, -delta/1000);
+        angle = turnAngle;
+        z = turnAmount;
     }
-    
+    //rotate about x axis
     if ( pressed.w ) {
-        glRotatef(1, -delta/1000,0.0f, 0.0f);
+        angle = turnAngle;
+        x = turnAmount;
     }
-    
-    if ( pressed.a ) {
-        glRotatef(1, 0.0f,-delta/1000, 0.0f);
-    }
-    
     if ( pressed.s ) {
-        glRotatef(1, delta/1000,0.0f, 0.0f);
+        angle = -turnAngle;
+        x = turnAmount;
+    }
+    //rotate about y axis
+    if ( pressed.a ) {
+        angle =turnAngle;
+        y = turnAmount;
     }
     
     if ( pressed.d ) {
-        glRotatef(1, 0.0f,delta/1000, 0.0f);
+        angle = -turnAngle;
+        y = turnAmount;
     }
+    
+    glRotatef(angle * deltaDraw, x * deltaDraw, y * deltaDraw, z * deltaDraw);
+    
 }
 
 void CheckCollisions() {
+    
+    //check for off screen bottom
+    if (mario->GetPosition().y <= -1.15f && !mario->isDead) {
+        titleSong.stop();
+        titleSong.openFromFile("dead.ogg");
+        titleSong.play();
+        mario->Dead();
+    }
+    
+    if (mario->GetPosition().y <= -4.8f && mario->isDead) {
+        titleSong.stop();
+        titleSong.openFromFile("overworld.ogg");
+        if (PLAYMUSIC) {
+            titleSong.play();
+        }
+        mario->Reset();
+    }
+    
     for (auto i = sprite.begin() ; i < sprite.end() ; i++ ) {
         Sprite* test = (*i);
         if (test == mario) {
@@ -467,18 +588,15 @@ void CheckCollisions() {
     }
     
     if (didCollide){
-            cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
         if (mario->bottomCollision) {
-            //mario->isJumping = false;
-            mario->isFalling = true;
+            mario->Fall();
             tempVec.x = mario->GetVelocity().x;
-            tempVec.y = mario->GetMaxGravity().y/2;
+            tempVec.y = mario->GetMaxGravity().y;
             mario->SetVelocity(tempVec);
         }
         
-        if (mario->topCollision) {
-            mario->isJumping = false;
-            mario->isFalling = false;
+        if (mario->topCollision && allowJump) {
+            mario->StopFall();
             tempVec.x = mario->GetVelocity().x;
             tempVec.y = 0;
             mario->SetVelocity(tempVec);
@@ -496,11 +614,11 @@ void CheckCollisions() {
             mario->SetVelocity(tempVec);
         }
     } else {
-        
+       mario->bottomCollision = mario->topCollision = mario->leftCollision = mario->rightCollision = false;
     }
     
-    if (!mario->isColliding && !mario->isJumping) {
-        mario->isFalling = true;
+    if (!mario->isColliding && !mario->isJumping && !mario->bottomCollision) {
+        mario->Fall();
     }
 }
 
@@ -520,6 +638,111 @@ void LoadObjects() {
     testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
     sprite.push_back(testSprite);
     
+    //Create test tiles
+    for (int i = 0 ; i < 15 ; i++) {
+        blockSprite = new Sprite();
+        char buffer[20]  ;
+        sprintf(buffer, "tile %d",i);
+        blockSprite->name = buffer;
+        blockSprite->AddAnimation(blankAnimation);
+        blockSprite->SetAnimationDelay(TILEANIMDELAY);
+        blockSprite->AddFrame("tile1.png", 0);
+        totalTextures++;
+        blockSprite->SetPosition(TILEX + (i *.1), TILEY, 0);
+        blockSprite->SetSize(TILEWIDTH, TILEHEIGHT, 0.0f);
+        blockSprite->IsBoundary(true);
+        blockSprite->isScrolling = true;
+        sprite.push_back(blockSprite);
+    }
+    
+    //Create block 1
+    blockSprite = new Sprite();
+    blockSprite->name = "Block";
+    blockSprite->AddAnimation(blankAnimation);
+    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+    blockSprite->AddFrame("block1.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block2.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block3.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block4.png", 0);
+    totalTextures++;
+    blockSprite->SetPosition(BLOCKX, BLOCKY, 0);
+    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+    blockSprite->SetLooping(true);
+    blockSprite->isAnimated = true;
+    blockSprite->IsBoundary(true);
+    blockSprite->isScrolling = true;
+    sprite.push_back(blockSprite);
+    blockSprite = 0;
+    
+    //Create block 1
+    blockSprite = new Sprite();
+    blockSprite->name = "Block 2";
+    blockSprite->AddAnimation(blankAnimation);
+    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+    blockSprite->AddFrame("block1.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block2.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block3.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block4.png", 0);
+    totalTextures++;
+    blockSprite->SetPosition(BLOCKX + .9, BLOCKY, 0);
+    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+    blockSprite->SetLooping(true);
+    blockSprite->isAnimated = true;
+    blockSprite->IsBoundary(true);
+    blockSprite->isScrolling = true;
+    sprite.push_back(blockSprite);
+    blockSprite = 0;
+    
+    //Create block 1
+    blockSprite = new Sprite();
+    blockSprite->name = "Block 3";
+    blockSprite->AddAnimation(blankAnimation);
+    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+    blockSprite->AddFrame("block1.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block2.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block3.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block4.png", 0);
+    totalTextures++;
+    blockSprite->SetPosition(BLOCKX + .75, BLOCKY -.46, 0);
+    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+    blockSprite->SetLooping(true);
+    blockSprite->isAnimated = true;
+    blockSprite->IsBoundary(true);
+    blockSprite->isScrolling = true;
+    sprite.push_back(blockSprite);
+    blockSprite = 0;
+    
+    //Create block 1
+    blockSprite = new Sprite();
+    blockSprite->name = "Block 4";
+    blockSprite->AddAnimation(blankAnimation);
+    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+    blockSprite->AddFrame("block1.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block2.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block3.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block4.png", 0);
+    totalTextures++;
+    blockSprite->SetPosition(BLOCKX -.4, BLOCKY -.46, 0);
+    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+    blockSprite->SetLooping(true);
+    blockSprite->isAnimated = true;
+    blockSprite->IsBoundary(true);
+    blockSprite->isScrolling = true;
+    sprite.push_back(blockSprite);
+    blockSprite = 0;
+    
     //Create mario
     marioSprite = new Sprite();
     marioSprite->SetSize(MARIOWIDTH, MARIOHEIGHT, 0);
@@ -537,8 +760,8 @@ void LoadObjects() {
     totalTextures++;
     marioSprite->AddFrame("marioleft.png", runningl);
     totalTextures++;
-    marioSprite->AddFrame("marioleft2.png", runningl);
-    totalTextures++;
+   // marioSprite->AddFrame("marioleft2.png", runningl);
+    //totalTextures++;
     marioSprite->AddFrame("marioleft3.png", runningl);
     totalTextures++;
     
@@ -548,8 +771,8 @@ void LoadObjects() {
     
     marioSprite->AddFrame("marioright.png", runningr);
     totalTextures++;
-    marioSprite->AddFrame("marioright2.png", runningr);
-    totalTextures++;
+    //marioSprite->AddFrame("marioright2.png", runningr);
+    //totalTextures++;
     marioSprite->AddFrame("marioright3.png", runningr);
     totalTextures++;
     
@@ -591,14 +814,6 @@ void LoadObjects() {
     tVec.x = MARIOFRICTIONX;
     marioSprite->SetFriction(tVec);
     
-    tVec.x = MARIOMAXX;
-    tVec.y = MARIOMAXY;
-    marioSprite->SetMaxVelocity(tVec);
-    
-    tVec.x = MARIOMINX;
-    tVec.y = MARIOMINY;
-    marioSprite->SetMinVelocity(tVec);
-    
     tVec.y = MARIOJUMP;
     marioSprite->SetJumpStrength(tVec);
     
@@ -606,110 +821,10 @@ void LoadObjects() {
     marioSprite->direction = rightd;
     marioSprite->SetAnimation(stoppedr);
     marioSprite->IsBoundary(true);
+    marioSprite->isScrolling = false;
     sprite.push_back(marioSprite);
     mario = marioSprite;
     marioSprite = 0;
-    
-    //Create test tiles
-    for (int i = 0 ; i < 10 ; i++) {
-        blockSprite = new Sprite();
-        char buffer[20]  ;
-        sprintf(buffer, "tile %d",i);
-        blockSprite->name = buffer;
-        blockSprite->AddAnimation(blankAnimation);
-        blockSprite->SetAnimationDelay(TILEANIMDELAY);
-        blockSprite->AddFrame("tile1.png", 0);
-        totalTextures++;
-        blockSprite->SetPosition(TILEX + (i *.1), TILEY, 0);
-        blockSprite->SetSize(TILEWIDTH, TILEHEIGHT, 0.0f);
-        blockSprite->IsBoundary(true);
-        sprite.push_back(blockSprite);
-    }
-    
-    //Create block 1
-    blockSprite = new Sprite();
-    blockSprite->name = "Block";
-    blockSprite->AddAnimation(blankAnimation);
-    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
-    blockSprite->SetPosition(BLOCKX, BLOCKY, 0);
-    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
-    blockSprite->SetLooping(true);
-    blockSprite->isAnimated = true;
-    blockSprite->IsBoundary(true);
-    sprite.push_back(blockSprite);
-    blockSprite = 0;
-    
-    //Create block 1
-    blockSprite = new Sprite();
-    blockSprite->name = "Block 2";
-    blockSprite->AddAnimation(blankAnimation);
-    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
-    blockSprite->SetPosition(BLOCKX + .9, BLOCKY, 0);
-    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
-    blockSprite->SetLooping(true);
-    blockSprite->isAnimated = true;
-    blockSprite->IsBoundary(true);
-    sprite.push_back(blockSprite);
-    blockSprite = 0;
-    
-    //Create block 1
-    blockSprite = new Sprite();
-    blockSprite->name = "Block 3";
-    blockSprite->AddAnimation(blankAnimation);
-    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
-    blockSprite->SetPosition(BLOCKX + .45, BLOCKY -.46, 0);
-    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
-    blockSprite->SetLooping(true);
-    blockSprite->isAnimated = true;
-    blockSprite->IsBoundary(true);
-    sprite.push_back(blockSprite);
-    blockSprite = 0;
-    
-    //Create block 1
-    blockSprite = new Sprite();
-    blockSprite->name = "Block 4";
-    blockSprite->AddAnimation(blankAnimation);
-    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
-    blockSprite->SetPosition(BLOCKX -.4, BLOCKY -.46, 0);
-    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
-    blockSprite->SetLooping(true);
-    blockSprite->isAnimated = true;
-    blockSprite->IsBoundary(true);
-    sprite.push_back(blockSprite);
-    blockSprite = 0;
-    
 }
 
 //Console text output used for debugging
@@ -720,9 +835,11 @@ void Console() {
     //cout << "MaxVx " << mario->GetMaxVelocity().x << endl;
     //cout << "MaxVy " << mario->GetMaxVelocity().y << endl;
     //cout << "Coll: " << mario->isColliding << endl;
-//    cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
+    // cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
     //cout << "Did collide: " << didCollide << endl;
-    cout << "sjump " << mario->stoppedJumping << endl;
+    //cout << "sjump " << mario->stoppedJumping << endl;
+    //cout << "allow jump " << allowJump <<  endl;
+    cout << "X: " << mario->GetPosition().x  << "Y: " << mario->GetPosition().y << endl;
 }
 
 

@@ -58,11 +58,19 @@ class Sprite {
     bool isStopping;
     bool isHurt;
     bool isDying;
+    bool isScrolling;
     bool stoppedJumping;
+    
     bool topCollision;
     bool bottomCollision;
     bool leftCollision;
     bool rightCollision;
+    bool topShift;
+    bool bottomShift;
+    bool leftShift;
+    bool rightShift;
+    
+    bool isDead;
     
     unsigned int numberOfAnimations;
     
@@ -71,6 +79,10 @@ class Sprite {
     void Update(float deltaTime);
     
     void Jump();
+    void Fall();
+    void StopFall();
+    void Dead();
+    void Reset();
     
     void SetVelocity(vector2d_t newVelocity);
     void SetMaxVelocity(vector2d_t newMaxVelocity);
@@ -143,6 +155,7 @@ class Sprite {
     vector2d_t maxFriction;
     
     dimensions_t position;
+    dimensions_t lastPosition;
     dimensions_t size;
     dimensions_t overlapPos;
     dimensions_t overlapSize;
@@ -150,6 +163,7 @@ class Sprite {
     TextureHandler texture;
     
     void CalculateSides();
+    void SavePosition();
     
 };
 

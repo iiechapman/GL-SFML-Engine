@@ -85,6 +85,22 @@ void Keyboard( unsigned char key,int x, int y ) {
             }
             break;
             
+        case 'r':
+            if (pressed.r) {
+                held.r = true;
+            } else {
+                pressed.r = true;
+            }
+            break;
+            
+        case 'm':
+            if (pressed.m) {
+                held.m = true;
+            } else {
+                pressed.m = true;
+            }
+            break;
+            
         default:
             break;
     }
@@ -144,6 +160,16 @@ void KeyboardUp( unsigned char key, int x, int y ) {
         case 'f':
             pressed.f = false;
             held.f = false;
+            break;
+            
+        case 'r':
+            pressed.r = false;
+            held.r = false;
+            break;
+            
+        case 'm':
+            pressed.m = false;
+            held.m = false;
             break;
         
         default:
