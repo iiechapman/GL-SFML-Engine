@@ -26,6 +26,10 @@ void Keyboard( unsigned char key,int x, int y ) {
             }
             break;
             
+        case kspace:
+            pressed.space = true;
+            break;
+            
         case '=':
             pressed.plus = true;
             break;
@@ -113,6 +117,10 @@ void KeyboardUp( unsigned char key, int x, int y ) {
     switch ( key ) {
         case kesc:
             pressed.escape = false;
+            break;
+            
+        case kspace:
+            pressed.space = false;
             break;
             
         case '=':

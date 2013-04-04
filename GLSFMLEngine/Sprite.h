@@ -60,6 +60,7 @@ class Sprite {
     bool isDying;
     bool isScrolling;
     bool stoppedJumping;
+    bool onGround;
     
     bool topCollision;
     bool bottomCollision;
@@ -73,6 +74,7 @@ class Sprite {
     bool isDead;
     
     unsigned int numberOfAnimations;
+    float scrollFactor;
     
     direction_t direction;
     
@@ -82,6 +84,8 @@ class Sprite {
     void Fall();
     void StopFall();
     void Dead();
+    void SavePosition();
+    void SetSavePosition(dimensions_t position);
     void Reset();
     
     void SetVelocity(vector2d_t newVelocity);
@@ -163,7 +167,6 @@ class Sprite {
     TextureHandler texture;
     
     void CalculateSides();
-    void SavePosition();
     
 };
 

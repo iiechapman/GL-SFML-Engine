@@ -30,6 +30,8 @@ Sprite::Sprite() {
     isBoundary = false;
     isDead = false;
     isScrolling = false;
+    scrollFactor = 1.0f;
+    onGround = false;
     
     numberOfAnimations = 0;
     animationDelay = 0;
@@ -238,7 +240,7 @@ void Sprite::Update(float deltaTime) {
     velocity.y += (acceleration.y * deltaTime);
     
     //if jumping, apply gravity
-    if ( isJumping || isFalling ) {
+    if ( ((isJumping || isFalling) && !onGround)  ) {
         if ( velocity.y < maxGravity.y ) {
             isJumping = false;
             isFalling = true;
@@ -251,7 +253,7 @@ void Sprite::Update(float deltaTime) {
     if ( isStopping ) {
         if ( velocity.x > 0 ) {
             velocity.x -= (friction.x * deltaTime);
-            if ( velocity.x < 0 ) {
+            if ( velocity.x <= 0 ) {
                 velocity.x = 0;
                 isStopping = false;
                 if (!isJumping && !isFalling){
@@ -272,9 +274,11 @@ void Sprite::Update(float deltaTime) {
         }
     }
 
+    
+    
     if ( velocity.x != 0 && velocity.y !=0) {
         isStopped = false;
-    } else  if ( velocity.x == 0 && velocity.y ==0) {
+    } else  if ( velocity.x == 0 && velocity.y == 0 && !isJumping && !isFalling) {
         isStopped = true;
         stoppedJumping = true;
     }
@@ -331,7 +335,7 @@ void Sprite::Update(float deltaTime) {
         isColliding = false;
     }
     
-    if ( (isJumping || isFalling) && !stoppedJumping) {
+    if ( (isJumping || isFalling)) {
         switch (direction) {
             case leftd:
                 SetAnimation(jumpingl);
@@ -347,16 +351,16 @@ void Sprite::Update(float deltaTime) {
     }
     
     //turning animation
-    if ( direction == rightd && velocity.x < 0 && (!isFalling && !isJumping)) {
+    if ( (direction == rightd) && (velocity.x < -.1 ) && velocity.y == 0 && onGround && !isJumping && !isFalling) {
         isTurning = true;
         SetAnimation(turningr);
-    } else if ( direction == leftd && velocity.x > 0 && (!isFalling && !isJumping) ) {
+    } else if ( (direction == leftd )  && (velocity.x > .1) && velocity.y == 0  && onGround  && !isJumping && !isFalling) {
         isTurning = true;
         SetAnimation(turningl);
     } else {
         isTurning = false;
     }
-    
+
     
     //if is dead overide all animation
     if (isDead) {
@@ -384,7 +388,7 @@ void Sprite::Jump() {
         isJumping = true;
         isFalling = false;
         stoppedJumping = false;
-        velocity.y = jumpStrength.y ;
+        velocity.y = jumpStrength.y;
 }
 
 void Sprite::Fall() {
@@ -395,17 +399,20 @@ void Sprite::Fall() {
 void Sprite::StopFall() {
     isFalling = false;
     isJumping = false;
-    //SavePosition();
 }
 
 void Sprite::SavePosition() {
     lastPosition = position;
 }
 
+void Sprite::SetSavePosition(dimensions_t position) {
+    lastPosition = position;
+}
+
 void Sprite::Dead() {
     isDead = true;
     velocity.x = 0;
-    velocity.y = 3.2f;
+    velocity.y = jumpStrength.y;
 }
 
 void Sprite::Reset() {
@@ -505,6 +512,7 @@ bool Sprite::IsBoundary() {
 }
 
 bool Sprite::Colliding(Sprite& rhs) {
+    isColliding = false;
     if ( rhs.IsBoundary() && !isDead) {
         if (   right >= rhs.left
             &&  left <= rhs.right
@@ -521,10 +529,10 @@ bool Sprite::Colliding(Sprite& rhs) {
             penLeft     = right - rhs.left;
             penRight    = rhs.right - left;
             
-            topShift    = (penTop <= penBottom) && (penTop <= penLeft) && (penTop <= penRight);
-            bottomShift = (penBottom <= penTop) && (penBottom <= penLeft) && (penBottom <= penRight);
-            leftShift   = (penLeft <= penTop) && (penLeft <= penBottom) && (penLeft <= penRight);
-            rightShift  = (penRight <= penTop) && (penRight <= penBottom) && (penRight <= penLeft);
+            topShift    = (penTop < penBottom) && (penTop < penLeft) && (penTop < penRight);
+            bottomShift = (penBottom < penTop) && (penBottom < penLeft) && (penBottom < penRight);
+            leftShift   = (penLeft < penTop) && (penLeft < penBottom) && (penLeft < penRight);
+            rightShift  = (penRight < penTop) && (penRight < penBottom) && (penRight < penLeft);
             
             if (bottomShift ) {
                 position.y = rhs.bottom;
@@ -535,7 +543,7 @@ bool Sprite::Colliding(Sprite& rhs) {
             if (topShift ) {
                 position.y = rhs.top + size.y;
                 topCollision = true;
-                SavePosition();
+                onGround = true;
                 bottomCollision = rightCollision = leftCollision = false;
             }
             
@@ -550,7 +558,6 @@ bool Sprite::Colliding(Sprite& rhs) {
                 rightCollision = true;
                 topCollision = bottomCollision = leftCollision = false;
             }
-            
         }
     }
     return isColliding;

@@ -32,10 +32,7 @@ vector2d_t secondVec;
 
 GLuint totalTextures;
 
-const int MAX_FPS = 60;
-bool PLAYMUSIC = true;
-bool DEPTH_ENABLED = false;
-bool FULLSCREEN = true;
+
 string windowTitle = "Super Mario Open - By Evan Chapman";
 string title = "Super Mario Open - By Evan Chapman";
 bool running;
@@ -56,11 +53,26 @@ const float WINDOWPOSX      = 300;
 const float WINDOWPOSY      = 300;
 const float ASPECTRATIO = WINDOWWIDTH / WINDOWHEIGHT;
 
+//Game Constants
+const int   MAX_FPS         =  60;
+
+bool        PLAYMUSIC       = true;
+bool        PLAYSOUND       = true;
+bool        DEPTH_ENABLED   = false;
+bool        FULLSCREEN      = false;
+
+//Timing Variables
+float timeChunk = .001;
+
 //Camera variables
 const float turnAngle = 100;
 const float turnAmount = 10;
 float CAMERAOFFSET = 0.0f;
+float CAMERAPOSX = 0.0f;
+float lastCameraPos = 0.0f;
 
+//Mouse Variables
+dimensions_t MOUSEPOS;
 
 //tile variables
 dimensions_t tilePos;
@@ -75,53 +87,56 @@ float animLastTime      = 0.0f;
 
 //time vars
 unsigned long long   delta   = 0.002f;
+
 float   lastTime          =  0.0f;
 float   curTime           =  0.0f;
 float   deltaTime         =  0.0f;
 float   timeOfLastDraw    =  0.0f;
-float   deltaDraw         =  0.0f;
+long double   deltaDraw         =  0.0f;
 
 //game constants
-const float BACKGROUNDWIDTH     =   2.0f;
-const float BACKGROUNDHEIGHT    =   2.0f;
-const float BACKGROUNDX         =  -1.0f;
-const float BACKGROUNDY         =   1.0f;
-const float SCROLLRIGHT         =   .06f;
-const float SCROLLLEFT          =   -0.3;
+const float BACKGROUNDWIDTH     =   1024.5f;
+const float BACKGROUNDHEIGHT    =   768.0f;
+const float BACKGROUNDX         =   0.0f;
+const float BACKGROUNDY         =   768.0f;
 
-const float MARIOX          = -.5;
-const float MARIOY          = -.62;
-const float MARIOWIDTH      = .13;
-const float MARIOHEIGHT     = .15;
-const float MARIOANIMDELAY  = .04;
+const float SCROLLRIGHT         =   500;
+const float SCROLLLEFT          =   300;
 
-const float MARIOFRICTIONX  = 1.8f;
+const float MARIOX          = 200;
+const float MARIOY          = 200;
+const float MARIOWIDTH      = 60;
+const float MARIOHEIGHT     = 60;
+const float MARIOANIMDELAY  = .12;
+const dimensions_t resetPosition {MARIOX, MARIOY};
 
-const float MARIOACCEL      = 4.0f;
-const float MARIOMAXVELX    = 0.9f;
-const float MARIOMAXVELY    = 6.0f;
-const float MARIORUNDIFF    = 0.5f;
+const float MARIOFRICTIONX  = 1000.8f;
 
-const float MARIOJUMP       =  2.5f;
-const float MARIOGRAV       = -10.0f;
-const float MARIOMAXGRAV    = -2.5f;
+const float MARIOACCEL      = 2000.0f;
+const float MARIOMAXVELX    = 400.0f;
+const float MARIOMAXVELY    = 600.0f;
+const float MARIORUNDIFF    = 100.0f;
 
-const float MARIOHIGHJUMPGRAV       = MARIOGRAV + 4 ;
+const float MARIOJUMP       =  600.0f;
+const float MARIOGRAV       = -1200.0f;
+const float MARIOMAXGRAV    = -40000.5f;
+
+const float MARIOHIGHJUMPGRAV       = MARIOGRAV + 400 ;
 const float MARIOHIGHJUMPMAXGRAV    = MARIOMAXGRAV;
 
-const float MARIODEADGRAV           = MARIOGRAV + 5;
-const float MARIODEADMAXGRAV        = MARIOMAXGRAV + .5;
+const float MARIODEADGRAV           = MARIOGRAV + 600;
+const float MARIODEADMAXGRAV        = MARIOMAXGRAV + 800;
 
-const float BLOCKX          = -.4;
-const float BLOCKY          = -.2;
-const float BLOCKWIDTH      = .15;
-const float BLOCKHEIGHT     = .19;
+const float BLOCKX          = 10;
+const float BLOCKY          = 160;
+const float BLOCKWIDTH      = 60;
+const float BLOCKHEIGHT     = 60;
 const float BLOCKANIMDELAY  = .10;
 
-const float TILEX          = -.8;
-const float TILEY          = -.85;
-const float TILEWIDTH      = 0.1;
-const float TILEHEIGHT     = 0.1;
+const float TILEX          = 9;
+const float TILEY          = 100;
+const float TILEWIDTH      = 60;
+const float TILEHEIGHT     = 60;
 const float TILEANIMDELAY  = .10;
 
 direction_t marioDirection;
@@ -155,14 +170,19 @@ sf::SoundBuffer skidBuffer;
 
 void Init();
 void Display();
+void PassiveMouseFunc(int x, int y);
 void Reshape( int w,int h );
 void Keyboard( unsigned char key,int x, int y );
 void KeyboardUp( unsigned char key, int x, int y );
 void SpecialKey( int key, int x ,int y );
 void SpecialKeyUp( int key,int x ,int y );
 void SpriteState();
+void PlaySound(sf::Sound& sound);
+void PlaySong(sf::Music& song);
 void SetScene();
 void ControlCamera();
+void CameraOffset();
+void ResetCamera();
 void Animate();
 void CheckInput();
 void Update();
@@ -177,7 +197,7 @@ void Console();
 
 int main ( int argc,char ** argv ) {
     Init();
-    startGameSound.play();
+    PlaySound(startGameSound);
     //Create opengl context
     cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
@@ -185,8 +205,8 @@ int main ( int argc,char ** argv ) {
     glutInitWindowPosition( WINDOWPOSX, WINDOWPOSY );
     glutInitWindowSize( WINDOWWIDTH, WINDOWHEIGHT );
     glutGameModeString("1024x768:32");
+    
     if ( !FULLSCREEN ) {
-        
         glutCreateWindow( windowTitle.c_str() );
     } else {
         glutCreateWindow( windowTitle.c_str() );
@@ -200,9 +220,9 @@ int main ( int argc,char ** argv ) {
     glutKeyboardUpFunc( KeyboardUp );
     glutSpecialFunc( SpecialKey );
     glutSpecialUpFunc( SpecialKeyUp );
+    glutPassiveMotionFunc( PassiveMouseFunc );
     glutJoystickFunc(Joystick,1);
     //Created opengl Context
-    
     LoadObjects();
     displayList = glGenLists( 1 );
     glutMainLoop();
@@ -212,13 +232,14 @@ int main ( int argc,char ** argv ) {
 }
 
 void Idle() {
+    CalculateFPS();
     CheckInput();
     Update();
     Animate();
     CheckCollisions();
     SetScene();
-    CalculateFPS();
     ControlCamera();
+    CameraOffset();
     glutPostRedisplay();
     Console();
 }
@@ -231,7 +252,7 @@ void Init(){
     
     if ( !hurtBuffer.loadFromFile("hurt.wav")) {
         cout << "Failed to load sound ... \n";
-    }
+    }   
     
     if (!startBuffer.loadFromFile("start.wav")) {
         cout << "Failed to load sound... \n";
@@ -251,14 +272,13 @@ void Init(){
     skidSound.setBuffer(skidBuffer);
     
     //Play music
-    if (PLAYMUSIC){
-        titleSong.setVolume(50.0f);
-        titleSong.play();
-    }
+    titleSong.setVolume(50.0f);
+    PlaySong(titleSong);
+    
 }
 
 void Display() {
-    timeOfLastDraw = glutGet( GLUT_ELAPSED_TIME ) * .001;
+    timeOfLastDraw = glutGet( GLUT_ELAPSED_TIME ) * timeChunk;
     glClear( GL_COLOR_BUFFER_BIT );
     glCallList( displayList );
     glutSwapBuffers();
@@ -267,15 +287,18 @@ void Display() {
 }
 
 void Reshape(int w, int h) {
-    glViewport( 0, 0, (GLsizei)w, (GLsizei)h );
+    glViewport( 0, 0, (GLsizei)w, (GLsizei)h);
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-    if (FULLSCREEN){
-     gluOrtho2D( -1.0 * ASPECTRATIO , 1.0 * ASPECTRATIO, -1.0 , 1.0);
-    }
-    if (!FULLSCREEN){
-        gluOrtho2D( -1.0  , 1.0 , -1.0 , 1.0);
-    }
+    gluOrtho2D(0, GLdouble (w), 0, GLdouble(h));
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+//    if (FULLSCREEN){
+//     gluOrtho2D( -1.0 * ASPECTRATIO/2 , 1.0 , -1.0 , 1.0);
+//    }
+//    if (!FULLSCREEN){
+//        gluOrtho2D( -1.0  , 1.0 , -1.0 , 1.0);
+//    }
 }
 
 
@@ -287,6 +310,7 @@ void SetScene() {
     glColor3f( 0.1f, 0.2f, 1.0f );
     
     //start textured drawing
+    glDisable(GL_LIGHTING);
     glEnable( GL_TEXTURE_2D );
     glEnable( GL_BLEND );
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -333,14 +357,15 @@ void CalculateFPS() {
         FPS = totalFramesRendered;
         totalFramesRendered = 0;
         char buffer[100];
-        sprintf(buffer, "Super Mario Open - By Evan Chapman - FPS: %d", FPS);
+        sprintf(buffer, "Super Mario Open - By Evan Chapman - FPS: %d MX: %f MY: %f",
+                FPS,MOUSEPOS.x, MOUSEPOS.y);
         windowTitle = buffer;
         glutSetWindowTitle(windowTitle.c_str());
     }
 }
 
 void CalculateDrawTime() {
-    deltaDraw = glutGet( GLUT_ELAPSED_TIME ) *.001 - timeOfLastDraw;
+    deltaDraw = glutGet( GLUT_ELAPSED_TIME ) * timeChunk - timeOfLastDraw;
 }
 
 void Update() {
@@ -373,19 +398,23 @@ void CheckInput() {
             glutLeaveGameMode();
         }
         hurtSound.setBuffer(hurtBuffer);
-        hurtSound.play();
+        PlaySound(hurtSound);
         titleSong.stop();
         Quit();
         cout << "Exit \n";
         exit(0);
     }
     
+    //Pause time with space
+    timeChunk = pressed.space ? 0 : .001;
+    
     //Reset Mario at will
     if (pressed.r) {
+        ResetCamera();
+        mario->SetSavePosition(resetPosition);
         mario->Reset();
-        mario->SetPosition(MARIOX, MARIOY, 0);
         titleSong.openFromFile("overworld.ogg");
-        titleSong.play();
+        PlaySong(titleSong);
     }
     
     if (pressed.m) {
@@ -398,7 +427,7 @@ void CheckInput() {
         FULLSCREEN = true;
         glutFullScreen();
         glLoadIdentity();
-        gluOrtho2D( -1.0 * ASPECTRATIO , 1.0 * ASPECTRATIO, -1.0 , 1.0);
+       // gluOrtho2D( -0.85 * ASPECTRATIO ,0.85 * ASPECTRATIO , -1.0 , 1.0);
     }
     
     //press left or right
@@ -443,9 +472,10 @@ void CheckInput() {
     //Press Jump button make mario jump
     if ( (pressed.x || pressed.jbutton2)
         && allowJump
+        && mario->onGround
         ) {
         allowJump = false;
-        jumpSound.play();
+        PlaySound(jumpSound);
         mario->Jump();
     } else {
         tempVec.y = 0.0f;
@@ -456,12 +486,12 @@ void CheckInput() {
     if ( pressed.x || held.jbutton2) {
         tempGravity.y = MARIOHIGHJUMPMAXGRAV;
         mario->SetMaxGravity(tempGravity);
-        tempGravity.y = MARIOHIGHJUMPGRAV + (mario->GetVelocity().x /2 );
+        tempGravity.y = MARIOHIGHJUMPGRAV + abs(mario->GetVelocity().x/4);
         mario->SetGravity(tempGravity);
     } else {
         tempGravity.y = MARIOMAXGRAV;
         mario->SetMaxGravity(tempGravity);
-        tempGravity.y = MARIOGRAV +  (mario->GetVelocity().x /2 ) ;
+        tempGravity.y = MARIOGRAV +  abs(mario->GetVelocity().x/4) ;
         mario->SetGravity(tempGravity);
     }
     
@@ -474,7 +504,7 @@ void CheckInput() {
     
     if ( mario->Turning() == true ) {
         if ( skidSound.getStatus() == 0 ) {
-            skidSound.play();
+            PlaySound(skidSound);
         }
     }
     
@@ -487,32 +517,23 @@ void CheckInput() {
     
     //if mario moves past scroll section
     if (mario->GetPosition().x > SCROLLRIGHT) {
-        float scrollShift = mario->GetPosition().x - SCROLLRIGHT ;
-        CAMERAOFFSET -= scrollShift;
+        CAMERAOFFSET = -(mario->GetPosition().x - SCROLLRIGHT) ;
         mario->SetPosition(SCROLLRIGHT, mario->GetPosition().y, mario->GetPosition().z);
-        for (auto i = sprite.begin() ; i != sprite.end(); i++ ) {
-            Sprite* object = *i;
-            if (object->isScrolling) {
-                object->SetPosition(object->GetPosition().x- scrollShift, object->GetPosition().y, object->GetPosition().z);
-            }
-        }
-    }
-    
-    if (mario->GetPosition().x < SCROLLLEFT) {
-        float scrollShift = mario->GetPosition().x - SCROLLLEFT ;
-        CAMERAOFFSET += scrollShift;
+    } else if (mario->GetPosition().x < SCROLLLEFT) {
+        CAMERAOFFSET = -(mario->GetPosition().x - SCROLLLEFT);
         mario->SetPosition(SCROLLLEFT, mario->GetPosition().y, mario->GetPosition().z);
-        for (auto i = sprite.begin() ; i != sprite.end(); i++ ) {
-            Sprite* object = *i;
-            if (object->isScrolling) {
-                object->SetPosition(object->GetPosition().x - scrollShift, object->GetPosition().y, object->GetPosition().z);
-            }
-        }
+    } else {
+        CAMERAOFFSET = 0;
     }
     
     mario->SetAcceleration( tempVec );
-    mario->SetAnimationDelay(.98 - abs(mario->GetVelocity().x));
+    mario->SetAnimationDelay(MARIOANIMDELAY - (MARIOANIMDELAY * (abs(mario->GetVelocity().x)/MARIOMAXVELX))/2);
     
+}
+
+void PassiveMouseFunc( int x , int y ) {
+    MOUSEPOS.x = x;
+    MOUSEPOS.y = WINDOWHEIGHT - y;
 }
 
 void ControlCamera() {
@@ -555,26 +576,43 @@ void ControlCamera() {
     glRotatef(angle * deltaDraw, x * deltaDraw, y * deltaDraw, z * deltaDraw);
     
 }
+void CameraOffset() {
+    CAMERAPOSX += CAMERAOFFSET;
+for (auto i = sprite.begin() ; i != sprite.end(); i++ ) {
+    Sprite* object = *i;
+    if (object->isScrolling) {
+        object->SetPosition(object->GetPosition().x + CAMERAOFFSET * object->scrollFactor, object->GetPosition().y, object->GetPosition().z);
+        }
+    }
+}
+
+void ResetCamera() {
+    CAMERAOFFSET = -CAMERAPOSX;
+    CameraOffset();
+    CAMERAOFFSET = 0;
+}
 
 void CheckCollisions() {
     
     //check for off screen bottom
-    if (mario->GetPosition().y <= -1.15f && !mario->isDead) {
+    if (mario->GetPosition().y <= -1 && !mario->isDead) {
         titleSong.stop();
         titleSong.openFromFile("dead.ogg");
-        titleSong.play();
+        PlaySong(titleSong);
         mario->Dead();
     }
     
-    if (mario->GetPosition().y <= -4.8f && mario->isDead) {
-        titleSong.stop();
+    if (mario->GetPosition().y <= -700 && mario->isDead) {
+        ResetCamera();
+        mario->SetPosition(MARIOX, MARIOY, 0);
+        CAMERAOFFSET    = lastCameraPos;
         titleSong.openFromFile("overworld.ogg");
-        if (PLAYMUSIC) {
-            titleSong.play();
-        }
+        PlaySong(titleSong);
         mario->Reset();
     }
-    
+    mario->onGround = false;
+    int collisionAmount = 0;
+    didCollide = false;
     for (auto i = sprite.begin() ; i < sprite.end() ; i++ ) {
         Sprite* test = (*i);
         if (test == mario) {
@@ -582,17 +620,21 @@ void CheckCollisions() {
         } else if (test != mario) {
             if (mario->Colliding(*test)) {
                 didCollide = true;
+                collisionAmount++;
             }
-            else didCollide = false;
         }
     }
-    
     if (didCollide){
         if (mario->bottomCollision) {
             mario->Fall();
             tempVec.x = mario->GetVelocity().x;
-            tempVec.y = mario->GetMaxGravity().y;
+            tempVec.y = mario->GetMaxGravity().y/2;
             mario->SetVelocity(tempVec);
+        }
+        
+        if (mario->topCollision) {
+            lastCameraPos = CAMERAPOSX;
+            mario->SavePosition();
         }
         
         if (mario->topCollision && allowJump) {
@@ -614,11 +656,24 @@ void CheckCollisions() {
             mario->SetVelocity(tempVec);
         }
     } else {
-       mario->bottomCollision = mario->topCollision = mario->leftCollision = mario->rightCollision = false;
+       //mario->bottomCollision = mario->topCollision = mario->leftCollision = mario->rightCollision = false;
+        //mario->onGround = false;
     }
     
-    if (!mario->isColliding && !mario->isJumping && !mario->bottomCollision) {
+    if (!mario->onGround) {
         mario->Fall();
+    }
+}
+
+void PlaySound(sf::Sound& sound) {
+    if (PLAYSOUND) {
+        sound.play();
+    }
+}
+
+void PlaySong(sf::Music& song) {
+    if (PLAYMUSIC) {
+        song.play();
     }
 }
 
@@ -636,6 +691,8 @@ void LoadObjects() {
     totalTextures++;
     testSprite->SetPosition(BACKGROUNDX, BACKGROUNDY, 0);
     testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
+    testSprite->isScrolling = true ;
+    testSprite->scrollFactor = .1;
     sprite.push_back(testSprite);
     
     //Create test tiles
@@ -648,7 +705,7 @@ void LoadObjects() {
         blockSprite->SetAnimationDelay(TILEANIMDELAY);
         blockSprite->AddFrame("tile1.png", 0);
         totalTextures++;
-        blockSprite->SetPosition(TILEX + (i *.1), TILEY, 0);
+        blockSprite->SetPosition(TILEX + (i *TILEWIDTH), TILEY, 0);
         blockSprite->SetSize(TILEWIDTH, TILEHEIGHT, 0.0f);
         blockSprite->IsBoundary(true);
         blockSprite->isScrolling = true;
@@ -690,7 +747,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX + .9, BLOCKY, 0);
+    blockSprite->SetPosition(BLOCKX + 600, BLOCKY, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -698,6 +755,51 @@ void LoadObjects() {
     blockSprite->isScrolling = true;
     sprite.push_back(blockSprite);
     blockSprite = 0;
+    
+    //Create block 1
+    blockSprite = new Sprite();
+    blockSprite->name = "Block 2b";
+    blockSprite->AddAnimation(blankAnimation);
+    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+    blockSprite->AddFrame("block1.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block2.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block3.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block4.png", 0);
+    totalTextures++;
+    blockSprite->SetPosition(BLOCKX + 600, BLOCKY+BLOCKHEIGHT, 0);
+    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+    blockSprite->SetLooping(true);
+    blockSprite->isAnimated = true;
+    blockSprite->IsBoundary(true);
+    blockSprite->isScrolling = true;
+    sprite.push_back(blockSprite);
+    blockSprite = 0;
+    
+    //Create block 1
+    blockSprite = new Sprite();
+    blockSprite->name = "Block 2c";
+    blockSprite->AddAnimation(blankAnimation);
+    blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+    blockSprite->AddFrame("block1.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block2.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block3.png", 0);
+    totalTextures++;
+    blockSprite->AddFrame("block4.png", 0);
+    totalTextures++;
+    blockSprite->SetPosition(BLOCKX + 600, BLOCKY + BLOCKHEIGHT*2, 0);
+    blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+    blockSprite->SetLooping(true);
+    blockSprite->isAnimated = true;
+    blockSprite->IsBoundary(true);
+    blockSprite->isScrolling = true;
+    sprite.push_back(blockSprite);
+    blockSprite = 0;
+    
     
     //Create block 1
     blockSprite = new Sprite();
@@ -712,7 +814,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX + .75, BLOCKY -.46, 0);
+    blockSprite->SetPosition(BLOCKX + 275, BLOCKY + 146, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -734,7 +836,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX -.4, BLOCKY -.46, 0);
+    blockSprite->SetPosition(BLOCKX + 500, BLOCKY + 300, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -820,7 +922,7 @@ void LoadObjects() {
     marioSprite->StopAnimation();
     marioSprite->direction = rightd;
     marioSprite->SetAnimation(stoppedr);
-    marioSprite->IsBoundary(true);
+    marioSprite->IsBoundary(false);
     marioSprite->isScrolling = false;
     sprite.push_back(marioSprite);
     mario = marioSprite;
@@ -838,8 +940,12 @@ void Console() {
     // cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
     //cout << "Did collide: " << didCollide << endl;
     //cout << "sjump " << mario->stoppedJumping << endl;
+    //cout << "IS falling? " << mario->isFalling << endl;
     //cout << "allow jump " << allowJump <<  endl;
     cout << "X: " << mario->GetPosition().x  << "Y: " << mario->GetPosition().y << endl;
+    //cout << "Camera Pos: " << CAMERAPOSX << endl;
+    //cout << "Last Camera Pos: " << lastCameraPos << endl;
+    //cout << "On ground " << mario->onGround << endl;
 }
 
 
