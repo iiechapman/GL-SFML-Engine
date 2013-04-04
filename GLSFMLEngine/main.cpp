@@ -26,9 +26,14 @@ Sprite* marioSprite;
 Sprite* testSprite;
 Sprite* blockSprite;
 Sprite* mario;
+Sprite* marioCollisionBox;
 
+//Blank Variables
 vector2d_t tempVec;
 vector2d_t secondVec;
+
+//Use blank canvas for animation
+vector<int> blankAnimation;
 
 GLuint totalTextures;
 
@@ -41,16 +46,17 @@ bool jumping;
 bool stopped;
 bool didCollide;
 bool allowJump = false;
+bool jumpLetGo = true;
 
 dimensions_t    position;
 dimensions_t    deltaPosition;
 dimensions_t    size;
 
 //Window constants
-const float WINDOWWIDTH     = 1024;
-const float WINDOWHEIGHT    = 768;
-const float WINDOWPOSX      = 300;
-const float WINDOWPOSY      = 300;
+const int WINDOWWIDTH     = 1024;
+const int WINDOWHEIGHT    = 768;
+const int WINDOWPOSX      = 300;
+const int WINDOWPOSY      = 300;
 const float ASPECTRATIO = WINDOWWIDTH / WINDOWHEIGHT;
 
 //Game Constants
@@ -95,48 +101,57 @@ float   timeOfLastDraw    =  0.0f;
 long double   deltaDraw         =  0.0f;
 
 //game constants
-const float BACKGROUNDWIDTH     =   1024.5f;
+const float BACKGROUNDWIDTH     =   1024.0f;
 const float BACKGROUNDHEIGHT    =   768.0f;
 const float BACKGROUNDX         =   0.0f;
 const float BACKGROUNDY         =   768.0f;
+const float BACKGROUNDSCROLL    =   .1f;
+
+const int DRAWROWS            = 12;
+const int DRAWCOLUMNS         = 16;
+
+const int DRAWWIDTH           =   WINDOWWIDTH/DRAWCOLUMNS;
+const int DRAWHEIGHT          =   WINDOWHEIGHT/DRAWROWS;
 
 const float SCROLLRIGHT         =   500;
 const float SCROLLLEFT          =   300;
 
+
+
 const float MARIOX          = 200;
 const float MARIOY          = 200;
-const float MARIOWIDTH      = 60;
-const float MARIOHEIGHT     = 60;
-const float MARIOANIMDELAY  = .12;
+const float MARIOWIDTH      = DRAWWIDTH;
+const float MARIOHEIGHT     = DRAWHEIGHT;
+const float MARIOANIMDELAY  = .15;
 const dimensions_t resetPosition {MARIOX, MARIOY};
 
-const float MARIOFRICTIONX  = 1000.8f;
+const float MARIOFRICTIONX  = 1000.0f;
 
-const float MARIOACCEL      = 2000.0f;
+const float MARIOACCEL      = 3000.0f;
 const float MARIOMAXVELX    = 400.0f;
-const float MARIOMAXVELY    = 600.0f;
-const float MARIORUNDIFF    = 100.0f;
+const float MARIOMAXVELY    = 9999.0f;
+const float MARIORUNDIFF    = 200.0f;
 
-const float MARIOJUMP       =  600.0f;
-const float MARIOGRAV       = -1200.0f;
-const float MARIOMAXGRAV    = -40000.5f;
+const float MARIOJUMP       =  1000.0f;
+const float MARIOGRAV       = -4000.0f;
+const float MARIOMAXGRAV    = -2000.0f;
 
-const float MARIOHIGHJUMPGRAV       = MARIOGRAV + 400 ;
+const float MARIOHIGHJUMPGRAV       = MARIOGRAV + MARIOJUMP * 1.5;
 const float MARIOHIGHJUMPMAXGRAV    = MARIOMAXGRAV;
 
-const float MARIODEADGRAV           = MARIOGRAV + 600;
-const float MARIODEADMAXGRAV        = MARIOMAXGRAV + 800;
+const float MARIODEADGRAV           = MARIOGRAV + MARIOJUMP * 2.5;
+const float MARIODEADMAXGRAV        = MARIOMAXGRAV + MARIOJUMP/4;
 
-const float BLOCKX          = 10;
-const float BLOCKY          = 160;
-const float BLOCKWIDTH      = 60;
-const float BLOCKHEIGHT     = 60;
+const float BLOCKX          = DRAWWIDTH;
+const float BLOCKY          = 2 * DRAWHEIGHT;
+const float BLOCKWIDTH      = DRAWWIDTH;
+const float BLOCKHEIGHT     = DRAWHEIGHT;
 const float BLOCKANIMDELAY  = .10;
 
-const float TILEX          = 9;
-const float TILEY          = 100;
-const float TILEWIDTH      = 60;
-const float TILEHEIGHT     = 60;
+const float TILEX          = DRAWWIDTH * -1;
+const float TILEY          = DRAWHEIGHT;
+const float TILEWIDTH      = DRAWWIDTH;
+const float TILEHEIGHT     = DRAWHEIGHT;
 const float TILEANIMDELAY  = .10;
 
 direction_t marioDirection;
@@ -162,15 +177,19 @@ sf::Sound jumpSound;
 sf::Sound startGameSound;
 sf::Sound skidSound;
 sf::Sound hurtSound;
+sf::Sound blockSound;
 
 sf::SoundBuffer hurtBuffer;
 sf::SoundBuffer startBuffer;
 sf::SoundBuffer jumpBuffer;
 sf::SoundBuffer skidBuffer;
+sf::SoundBuffer blockBuffer;
 
+//Game state functions
 void Init();
 void Display();
 void PassiveMouseFunc(int x, int y);
+void MouseFunc(int button, int state, int x, int y);
 void Reshape( int w,int h );
 void Keyboard( unsigned char key,int x, int y );
 void KeyboardUp( unsigned char key, int x, int y );
@@ -204,7 +223,9 @@ int main ( int argc,char ** argv ) {
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowPosition( WINDOWPOSX, WINDOWPOSY );
     glutInitWindowSize( WINDOWWIDTH, WINDOWHEIGHT );
-    glutGameModeString("1024x768:32");
+    char buffer[100];
+    sprintf(buffer, "%dx%d:32" , WINDOWWIDTH , WINDOWHEIGHT);
+    glutGameModeString(buffer);
     
     if ( !FULLSCREEN ) {
         glutCreateWindow( windowTitle.c_str() );
@@ -221,6 +242,7 @@ int main ( int argc,char ** argv ) {
     glutSpecialFunc( SpecialKey );
     glutSpecialUpFunc( SpecialKeyUp );
     glutPassiveMotionFunc( PassiveMouseFunc );
+    glutMouseFunc( MouseFunc );
     glutJoystickFunc(Joystick,1);
     //Created opengl Context
     LoadObjects();
@@ -266,10 +288,15 @@ void Init(){
         cout << "Could not load file \n";
     }
     
+    if (!blockBuffer.loadFromFile("blockhit.wav")) {
+        cout << "Could not load file \n";
+    }
+    
     //Load jump sound
     jumpSound.setBuffer(jumpBuffer);
     startGameSound.setBuffer(startBuffer);
     skidSound.setBuffer(skidBuffer);
+    blockSound.setBuffer(blockBuffer);
     
     //Play music
     titleSong.setVolume(50.0f);
@@ -293,12 +320,6 @@ void Reshape(int w, int h) {
     gluOrtho2D(0, GLdouble (w), 0, GLdouble(h));
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-//    if (FULLSCREEN){
-//     gluOrtho2D( -1.0 * ASPECTRATIO/2 , 1.0 , -1.0 , 1.0);
-//    }
-//    if (!FULLSCREEN){
-//        gluOrtho2D( -1.0  , 1.0 , -1.0 , 1.0);
-//    }
 }
 
 
@@ -310,7 +331,6 @@ void SetScene() {
     glColor3f( 0.1f, 0.2f, 1.0f );
     
     //start textured drawing
-    glDisable(GL_LIGHTING);
     glEnable( GL_TEXTURE_2D );
     glEnable( GL_BLEND );
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -345,6 +365,7 @@ void SetScene() {
         
         glEnd();
     }
+    glDisable(GL_LIGHTING);	
     glEndList();
 }
 
@@ -427,7 +448,7 @@ void CheckInput() {
         FULLSCREEN = true;
         glutFullScreen();
         glLoadIdentity();
-       // gluOrtho2D( -0.85 * ASPECTRATIO ,0.85 * ASPECTRATIO , -1.0 , 1.0);
+        gluOrtho2D(.2,1, 0, 1);
     }
     
     //press left or right
@@ -465,25 +486,25 @@ void CheckInput() {
     }
     
     //Reset marios ability to jump
-    if ((mario->topCollision) && !allowJump && !pressed.x) {
+    if ((mario->topCollision)  && !pressed.x && !held.x) {
             allowJump = true;
     }
     
     //Press Jump button make mario jump
     if ( (pressed.x || pressed.jbutton2)
-        && allowJump
-        && mario->onGround
+        && jumpLetGo
         ) {
-        allowJump = false;
+        jumpLetGo = false;
         PlaySound(jumpSound);
         mario->Jump();
-    } else {
-        tempVec.y = 0.0f;
     }
     
     //change jump height based on length of jump button hold
     vector2d_t  tempGravity;
     if ( pressed.x || held.jbutton2) {
+        if (mario->isJumping || mario->isFalling){
+            
+        }
         tempGravity.y = MARIOHIGHJUMPMAXGRAV;
         mario->SetMaxGravity(tempGravity);
         tempGravity.y = MARIOHIGHJUMPGRAV + abs(mario->GetVelocity().x/4);
@@ -493,6 +514,9 @@ void CheckInput() {
         mario->SetMaxGravity(tempGravity);
         tempGravity.y = MARIOGRAV +  abs(mario->GetVelocity().x/4) ;
         mario->SetGravity(tempGravity);
+        if (mario->onGround) {
+            jumpLetGo = true;
+        }
     }
     
     if (mario->isDead) {
@@ -534,6 +558,39 @@ void CheckInput() {
 void PassiveMouseFunc( int x , int y ) {
     MOUSEPOS.x = x;
     MOUSEPOS.y = WINDOWHEIGHT - y;
+}
+
+void MouseFunc(int button , int state , int x, int y) {
+    int fixedX = x - (x % DRAWWIDTH);
+    int fixedY = WINDOWHEIGHT - (y - (y % DRAWHEIGHT));
+    switch (button){
+            case GLUT_LEFT_BUTTON:
+            if (state == GLUT_DOWN) {
+                PlaySound(blockSound);
+                //Create block 1
+                blockSprite = new Sprite();
+                blockSprite->name = "New Block";
+                blockSprite->AddAnimation(blankAnimation);
+                blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+                blockSprite->AddFrame("block1.png", 0);
+                totalTextures++;
+                blockSprite->AddFrame("block2.png", 0);
+                totalTextures++;
+                blockSprite->AddFrame("block3.png", 0);
+                totalTextures++;
+                blockSprite->AddFrame("block4.png", 0);
+                totalTextures++;
+                blockSprite->SetPosition(fixedX,fixedY , 0);
+                blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+                blockSprite->SetLooping(true);
+                blockSprite->isAnimated = true;
+                blockSprite->IsBoundary(true);
+                blockSprite->isScrolling = true;
+                sprite.push_back(blockSprite);
+                blockSprite = 0;
+            }
+            break;
+    }
 }
 
 void ControlCamera() {
@@ -602,7 +659,7 @@ void CheckCollisions() {
         mario->Dead();
     }
     
-    if (mario->GetPosition().y <= -700 && mario->isDead) {
+    if (mario->GetPosition().y <= -5000 && mario->isDead) {
         ResetCamera();
         mario->SetPosition(MARIOX, MARIOY, 0);
         CAMERAOFFSET    = lastCameraPos;
@@ -610,9 +667,9 @@ void CheckCollisions() {
         PlaySong(titleSong);
         mario->Reset();
     }
-    mario->onGround = false;
     int collisionAmount = 0;
     didCollide = false;
+    mario->onGround = false;
     for (auto i = sprite.begin() ; i < sprite.end() ; i++ ) {
         Sprite* test = (*i);
         if (test == mario) {
@@ -625,11 +682,19 @@ void CheckCollisions() {
         }
     }
     if (didCollide){
+        tempVec.x = mario->GetVelocity().x;
+        tempVec.y = mario->GetVelocity().y;
+
         if (mario->bottomCollision) {
-            mario->Fall();
-            tempVec.x = mario->GetVelocity().x;
-            tempVec.y = mario->GetMaxGravity().y/2;
-            mario->SetVelocity(tempVec);
+            tempVec.y =0;
+        }
+        
+        if (mario->topCollision ) {
+            if (mario->isFalling ){
+                tempVec.y = 0;
+                cout << "Stopped" << endl;
+                 cout << "Jump " << mario->isJumping << endl << "Fall: " << mario->isFalling << " On ground " << mario->onGround << endl;
+            }
         }
         
         if (mario->topCollision) {
@@ -637,31 +702,24 @@ void CheckCollisions() {
             mario->SavePosition();
         }
         
-        if (mario->topCollision && allowJump) {
-            mario->StopFall();
-            tempVec.x = mario->GetVelocity().x;
-            tempVec.y = 0;
-            mario->SetVelocity(tempVec);
-        }
-        
         if (mario->rightCollision) {
             tempVec.x = 0;
-            tempVec.y = mario->GetVelocity().y;
-            mario->SetVelocity(tempVec);
         }
     
         if (mario->leftCollision) {
             tempVec.x = 0;
-            tempVec.y = mario->GetVelocity().y;
-            mario->SetVelocity(tempVec);
         }
+        
+        
+       mario->SetVelocity(tempVec);
     } else {
-       //mario->bottomCollision = mario->topCollision = mario->leftCollision = mario->rightCollision = false;
-        //mario->onGround = false;
+  
     }
     
     if (!mario->onGround) {
         mario->Fall();
+    } else {
+        mario->StopFall();
     }
 }
 
@@ -680,9 +738,6 @@ void PlaySong(sf::Music& song) {
 void LoadObjects() {
     cout << "Loading Objects: " << "\n";
     
-    //Use blank canvas for animation
-    vector<int> blankAnimation;
-    
     //Create background
     testSprite = new Sprite();
     testSprite->name = "Background";
@@ -692,7 +747,31 @@ void LoadObjects() {
     testSprite->SetPosition(BACKGROUNDX, BACKGROUNDY, 0);
     testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
     testSprite->isScrolling = true ;
-    testSprite->scrollFactor = .1;
+    testSprite->scrollFactor = BACKGROUNDSCROLL;
+    sprite.push_back(testSprite);
+    
+    //Create background
+    testSprite = new Sprite();
+    testSprite->name = "Background 2";
+    testSprite->AddAnimation(blankAnimation);
+    testSprite->AddFrame("background1.png", 0);
+    totalTextures++;
+    testSprite->SetPosition(BACKGROUNDX + BACKGROUNDWIDTH - .1, BACKGROUNDY, 0);
+    testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
+    testSprite->isScrolling = true ;
+    testSprite->scrollFactor = BACKGROUNDSCROLL;
+    sprite.push_back(testSprite);
+    
+    //Create background
+    testSprite = new Sprite();
+    testSprite->name = "Background 3";
+    testSprite->AddAnimation(blankAnimation);
+    testSprite->AddFrame("background1.png", 0);
+    totalTextures++;
+    testSprite->SetPosition(BACKGROUNDX - BACKGROUNDWIDTH +.1, BACKGROUNDY, 0);
+    testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
+    testSprite->isScrolling = true ;
+    testSprite->scrollFactor = BACKGROUNDSCROLL;
     sprite.push_back(testSprite);
     
     //Create test tiles
@@ -927,22 +1006,24 @@ void LoadObjects() {
     sprite.push_back(marioSprite);
     mario = marioSprite;
     marioSprite = 0;
+    
 }
 
 //Console text output used for debugging
 void Console() {
-    //cout << "Jump " << mario->isJumping << endl << "Fall: " << mario->isFalling << endl;
+   // cout << "Jump " << mario->isJumping << endl << "Fall: " << mario->isFalling << " On ground " << mario->onGround << endl;
+    //cout << "Is stopped: " << mario->isStopped << endl;
     //cout << "Vel X: " << mario->GetVelocity().x << endl << "Vel Y: " << mario->GetVelocity().y << endl;
     //cout << "JSy: " << mario->GetJumpStrength().y << endl;
     //cout << "MaxVx " << mario->GetMaxVelocity().x << endl;
     //cout << "MaxVy " << mario->GetMaxVelocity().y << endl;
     //cout << "Coll: " << mario->isColliding << endl;
-    // cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
+    //cout << "T: " << mario->topCollision << " B: " << mario->bottomCollision << " L: " << mario->leftCollision << " R: " << mario->rightCollision << endl;
     //cout << "Did collide: " << didCollide << endl;
     //cout << "sjump " << mario->stoppedJumping << endl;
-    //cout << "IS falling? " << mario->isFalling << endl;
     //cout << "allow jump " << allowJump <<  endl;
-    cout << "X: " << mario->GetPosition().x  << "Y: " << mario->GetPosition().y << endl;
+    //cout << "Jump let go "  << jumpLetGo << endl;
+    //cout << "X: " << mario->GetPosition().x  << "Y: " << mario->GetPosition().y << endl;
     //cout << "Camera Pos: " << CAMERAPOSX << endl;
     //cout << "Last Camera Pos: " << lastCameraPos << endl;
     //cout << "On ground " << mario->onGround << endl;
