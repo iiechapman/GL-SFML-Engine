@@ -26,7 +26,7 @@ Sprite* marioSprite;
 Sprite* testSprite;
 Sprite* blockSprite;
 Sprite* mario;
-Sprite* marioCollisionBox;
+Sprite* hammer;
 
 //Blank Variables
 vector2d_t tempVec;
@@ -62,7 +62,7 @@ const float ASPECTRATIO = WINDOWWIDTH / WINDOWHEIGHT;
 //Game Constants
 const int   MAX_FPS         =  60;
 
-bool        PLAYMUSIC       = true;
+bool        PLAYMUSIC       = false;
 bool        PLAYSOUND       = true;
 bool        DEPTH_ENABLED   = false;
 bool        FULLSCREEN      = false;
@@ -93,6 +93,7 @@ float animLastTime      = 0.0f;
 
 //time vars
 unsigned long long   delta   = 0.002f;
+//This is a test
 
 float   lastTime          =  0.0f;
 float   curTime           =  0.0f;
@@ -118,7 +119,7 @@ const float SCROLLLEFT          =   300;
 
 
 
-const float MARIOX          = 200;
+const float MARIOX          = 400;
 const float MARIOY          = 200;
 const float MARIOWIDTH      = DRAWWIDTH;
 const float MARIOHEIGHT     = DRAWHEIGHT;
@@ -178,12 +179,14 @@ sf::Sound startGameSound;
 sf::Sound skidSound;
 sf::Sound hurtSound;
 sf::Sound blockSound;
+sf::Sound destroySound;
 
 sf::SoundBuffer hurtBuffer;
 sf::SoundBuffer startBuffer;
 sf::SoundBuffer jumpBuffer;
 sf::SoundBuffer skidBuffer;
 sf::SoundBuffer blockBuffer;
+sf::SoundBuffer destroyBuffer;
 
 //Game state functions
 void Init();
@@ -292,11 +295,16 @@ void Init(){
         cout << "Could not load file \n";
     }
     
+    if (!destroyBuffer.loadFromFile("destroy.wav")) {
+        cout << "Could not load file \n";
+    }
+    
     //Load jump sound
     jumpSound.setBuffer(jumpBuffer);
     startGameSound.setBuffer(startBuffer);
     skidSound.setBuffer(skidBuffer);
     blockSound.setBuffer(blockBuffer);
+    destroySound.setBuffer(destroyBuffer);
     
     //Play music
     titleSong.setVolume(50.0f);
@@ -486,13 +494,14 @@ void CheckInput() {
     }
     
     //Reset marios ability to jump
-    if ((mario->topCollision)  && !pressed.x && !held.x) {
+    if ((mario->topCollision)  && !pressed.x && !held.x && !pressed.cntrl) {
             allowJump = true;
     }
     
     //Press Jump button make mario jump
     if ( (pressed.x || pressed.jbutton2)
         && jumpLetGo
+        && !mario->isFalling
         ) {
         jumpLetGo = false;
         PlaySound(jumpSound);
@@ -558,13 +567,16 @@ void CheckInput() {
 void PassiveMouseFunc( int x , int y ) {
     MOUSEPOS.x = x;
     MOUSEPOS.y = WINDOWHEIGHT - y;
+    
+    hammer->SetPosition( x  - (x % DRAWWIDTH) + fmod(CAMERAPOSX, DRAWWIDTH),
+                        WINDOWHEIGHT - (y - (y % DRAWHEIGHT)), 0);
 }
 
 void MouseFunc(int button , int state , int x, int y) {
-    int fixedX = x - (x % DRAWWIDTH);
-    int fixedY = WINDOWHEIGHT - (y - (y % DRAWHEIGHT));
+    float fixedX = x  - (x % DRAWWIDTH) + fmod(CAMERAPOSX, DRAWWIDTH);
+    float fixedY = WINDOWHEIGHT - (y - (y % DRAWHEIGHT));
     switch (button){
-            case GLUT_LEFT_BUTTON:
+        case GLUT_LEFT_BUTTON:
             if (state == GLUT_DOWN) {
                 PlaySound(blockSound);
                 //Create block 1
@@ -589,6 +601,33 @@ void MouseFunc(int button , int state , int x, int y) {
                 sprite.push_back(blockSprite);
                 blockSprite = 0;
             }
+            break;
+            
+        case GLUT_RIGHT_BUTTON:
+            if (state == GLUT_DOWN) {
+                 y = WINDOWHEIGHT - y;
+                for ( auto i = sprite.end() - 1 ; i != sprite.begin() ;i--) {
+                    dimensions_t size = (*i)->GetSize();
+                    dimensions_t pos = (*i)->GetPosition();
+                    if ((*i)->IsBoundary()) {
+                        //If mouse is over an object
+                        if (x >= pos.x &&
+                            x <= pos.x + size.x &&
+                            y <= pos.y &&
+                            y >= pos.y - size.y
+                            ) {
+                            PlaySound(destroySound);
+                            cout << "Deleted " << (*i)->name << " object..." << endl;
+                            sprite.erase(i);
+                        } else {
+                            cout << (*i)->name << " is not within cursor " << endl;
+                        }
+                    }
+                }
+            }
+            break;
+            
+        default:
             break;
     }
 }
@@ -749,6 +788,7 @@ void LoadObjects() {
     testSprite->isScrolling = true ;
     testSprite->scrollFactor = BACKGROUNDSCROLL;
     sprite.push_back(testSprite);
+    testSprite = 0;
     
     //Create background
     testSprite = new Sprite();
@@ -761,6 +801,7 @@ void LoadObjects() {
     testSprite->isScrolling = true ;
     testSprite->scrollFactor = BACKGROUNDSCROLL;
     sprite.push_back(testSprite);
+    testSprite = 0;
     
     //Create background
     testSprite = new Sprite();
@@ -773,6 +814,7 @@ void LoadObjects() {
     testSprite->isScrolling = true ;
     testSprite->scrollFactor = BACKGROUNDSCROLL;
     sprite.push_back(testSprite);
+    testSprite = 0;
     
     //Create test tiles
     for (int i = 0 ; i < 15 ; i++) {
@@ -789,6 +831,7 @@ void LoadObjects() {
         blockSprite->IsBoundary(true);
         blockSprite->isScrolling = true;
         sprite.push_back(blockSprite);
+        blockSprite = 0;
     }
     
     //Create block 1
@@ -804,7 +847,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX, BLOCKY, 0);
+    blockSprite->SetPosition(BLOCKX, BLOCKY + BLOCKHEIGHT * 1, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -826,7 +869,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX + 600, BLOCKY, 0);
+    blockSprite->SetPosition(BLOCKX  + 2 * BLOCKWIDTH, BLOCKY + BLOCKHEIGHT * 1, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -848,7 +891,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX + 600, BLOCKY+BLOCKHEIGHT, 0);
+    blockSprite->SetPosition(BLOCKX  + 1 * BLOCKWIDTH , BLOCKY + BLOCKHEIGHT * 1, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -870,7 +913,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX + 600, BLOCKY + BLOCKHEIGHT*2, 0);
+    blockSprite->SetPosition(BLOCKX  + 4 * BLOCKWIDTH, BLOCKY + BLOCKHEIGHT*2, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -893,7 +936,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX + 275, BLOCKY + 146, 0);
+    blockSprite->SetPosition(BLOCKX  - 2 * BLOCKWIDTH, BLOCKY  , 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -915,7 +958,7 @@ void LoadObjects() {
     totalTextures++;
     blockSprite->AddFrame("block4.png", 0);
     totalTextures++;
-    blockSprite->SetPosition(BLOCKX + 500, BLOCKY + 300, 0);
+    blockSprite->SetPosition(BLOCKX + 4 * BLOCKWIDTH , BLOCKY + 1* BLOCKHEIGHT , 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
     blockSprite->isAnimated = true;
@@ -1007,6 +1050,12 @@ void LoadObjects() {
     mario = marioSprite;
     marioSprite = 0;
     
+    hammer = new Sprite();
+    hammer->name = "Hammer Icon";
+    hammer->AddAnimation(blankAnimation);
+    hammer->AddFrame("hammer.png", 0);
+    hammer->SetSize(DRAWWIDTH, DRAWHEIGHT, 0);
+    sprite.push_back(hammer);
 }
 
 //Console text output used for debugging

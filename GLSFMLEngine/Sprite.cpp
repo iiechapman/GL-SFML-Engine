@@ -16,6 +16,7 @@
  */
 Sprite::Sprite() {
     //Just used for testing
+    name = "Default Name";
     isAnimated = false;
     isColliding = false;
     isFalling = false;
@@ -75,6 +76,12 @@ Sprite::Sprite() {
     
     velocity.x = 0;
     velocity.y = 0;
+    
+    position.x = 0;
+    position.x = 0;
+    
+    size.x = 0;
+    size.y = 0;
     
     direction = leftd;
     R=G=B= 1.5f;

@@ -25,7 +25,7 @@ typedef enum keycodes_t{
     kleft   = 100,
     kright  = 102,
     kesc    = 27,
-    kspace  = 32
+    kspace  = 32,
 } keycodes_t;
 
 
