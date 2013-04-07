@@ -88,11 +88,22 @@
 		4E64DD9C16DD3C250027065F /* GLSFMLEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4E64DD9D16DD3C250027065F /* main.cpp */,
+				4EEB516B16EFFE1B0053EB4F /* Sprite */,
+				4E8AFD511711088800E04904 /* TextureHandler */,
 				4EA1F20B16F138B70046C5A9 /* Input */,
 				4EEB516C16F1159F0053EB4F /* Support */,
-				4EEB516B16EFFE1B0053EB4F /* Sprite */,
 			);
 			path = GLSFMLEngine;
+			sourceTree = "<group>";
+		};
+		4E8AFD511711088800E04904 /* TextureHandler */ = {
+			isa = PBXGroup;
+			children = (
+				4EC167BE16ECDB1D00ADEE26 /* TextureHandler.h */,
+				4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */,
+			);
+			name = TextureHandler;
 			sourceTree = "<group>";
 		};
 		4EA1F20B16F138B70046C5A9 /* Input */ = {
@@ -110,9 +121,6 @@
 			children = (
 				4EC167C016ECF25700ADEE26 /* Sprite.cpp */,
 				4EC167C116ECF25700ADEE26 /* Sprite.h */,
-				4EC167BE16ECDB1D00ADEE26 /* TextureHandler.h */,
-				4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */,
-				4E64DD9D16DD3C250027065F /* main.cpp */,
 			);
 			name = Sprite;
 			sourceTree = "<group>";

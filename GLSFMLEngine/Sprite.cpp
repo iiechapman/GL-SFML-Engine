@@ -135,6 +135,11 @@ void Sprite::SetColor(float red, float green, float blue ){
  Add texture to new frame of animation
  ====================
  */
+void Sprite::AddFrame(GLuint textureID, int animationIndex) {
+    animIndex[animationIndex].push_back(textureID);
+}
+
+//Deprecated feature, phasing out
 void Sprite::AddFrame(const std::string& filename, int animationIndex ) {
     int textureID = texture.Load(filename);
     if ( textureID == 0 ) {
@@ -143,7 +148,9 @@ void Sprite::AddFrame(const std::string& filename, int animationIndex ) {
     animIndex[animationIndex].push_back(textureID);
 }
 
-
+void Sprite::SetFrame(GLuint textureID, int animationIndex,int frame) {
+    animIndex[animationIndex][frame] = textureID;
+}
 
 /*
  ===============

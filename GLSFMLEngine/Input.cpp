@@ -16,7 +16,7 @@ buttons_t held;
 buttons_t released;
 
 void Keyboard( unsigned char key,int x, int y ) {
-   // std::cout << "Key: " << key << "\n";
+
     switch ( key ) {
         case kesc:
             if (pressed.escape){
@@ -47,11 +47,21 @@ void Keyboard( unsigned char key,int x, int y ) {
             break;
             
         case 'w':
-            pressed.w = true;
+            if (pressed.w){
+                held.w = true;
+                released.w = false;
+            } else {
+                pressed.w = true;
+            }
             break;
             
         case 'a':
-            pressed.a = true;
+            if (pressed.a) {
+                held.a = true;
+                released.a = false;
+            } else {
+                pressed.a = true;
+            }
             break;
             
         case 's':
@@ -59,7 +69,11 @@ void Keyboard( unsigned char key,int x, int y ) {
             break;
             
         case 'd':
-            pressed.d = true;
+            if (pressed.d) {
+                held.d = true;
+            } else {
+                pressed.d = true;
+            }
             break;
             
         case 'z':
@@ -141,10 +155,14 @@ void KeyboardUp( unsigned char key, int x, int y ) {
             
         case 'w':
             pressed.w = false;
+            held.w = false;
+            released.w = true;
             break;
             
         case 'a':
             pressed.a = false;
+            held.a = false;
+            released.a = true;
             break;
             
         case 's':
@@ -153,6 +171,7 @@ void KeyboardUp( unsigned char key, int x, int y ) {
             
         case 'd':
             pressed.d = false;
+            held.d    = false;
             break;
             
         case 'z':

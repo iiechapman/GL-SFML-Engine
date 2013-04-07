@@ -111,8 +111,9 @@ class Sprite {
     
     bool Turning();
     
-    
+    void AddFrame(GLuint textureID , int animationIndex);
     void AddFrame(const std::string& filename , int animationIndex);
+    void SetFrame(GLuint textureID , int animationIndex, int frame);
     void AddAnimation(vector<int> newAnimation);
     void SetAnimation(int index);
     void SetAnimationDelay(float delay);

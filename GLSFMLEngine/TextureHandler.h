@@ -28,12 +28,12 @@ class TextureHandler {
 public:
     TextureHandler();
     ~TextureHandler();
-    int Load( const std::string& filename );
+    GLuint Load( const std::string& filename );
     
 private:
     int totalImages;
     
-    int LoadImage( const std::string& filename , sf::Image* bufferImage );
+    GLuint LoadImage( const std::string& filename , sf::Image* bufferImage );
 };
 
 #endif /* defined(__GLSFMLEngine__TextureHandler__) */

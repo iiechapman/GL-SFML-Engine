@@ -20,7 +20,7 @@ using namespace std;
  * Evan Chapman 2013
  */
 
-//Debug header
+//Test Objects
 vector<Sprite*> sprite;
 Sprite* marioSprite;
 Sprite* testSprite;
@@ -35,7 +35,17 @@ vector2d_t secondVec;
 //Use blank canvas for animation
 vector<int> blankAnimation;
 
+//Texture Variables
+TextureHandler* textureLoader;
 GLuint totalTextures;
+GLuint bgTexID;
+GLuint blockTexID[4];
+GLuint woodTexID;
+GLuint grassTexID;
+GLuint sandTexID;
+GLuint hammerTexID;
+GLuint selectedBlockID[3];
+int blockSelection = 0;
 
 
 string windowTitle = "Super Mario Open - By Evan Chapman";
@@ -62,7 +72,7 @@ const float ASPECTRATIO = WINDOWWIDTH / WINDOWHEIGHT;
 //Game Constants
 const int   MAX_FPS         =  60;
 
-bool        PLAYMUSIC       = false;
+bool        PLAYMUSIC       = true;
 bool        PLAYSOUND       = true;
 bool        DEPTH_ENABLED   = false;
 bool        FULLSCREEN      = false;
@@ -117,14 +127,12 @@ const int DRAWHEIGHT          =   WINDOWHEIGHT/DRAWROWS;
 const float SCROLLRIGHT         =   500;
 const float SCROLLLEFT          =   300;
 
-
-
 const float MARIOX          = 400;
 const float MARIOY          = 200;
 const float MARIOWIDTH      = DRAWWIDTH;
 const float MARIOHEIGHT     = DRAWHEIGHT;
 const float MARIOANIMDELAY  = .15;
-const dimensions_t resetPosition {MARIOX, MARIOY};
+const dimensions_t resetPosition {MARIOX, MARIOY,0};
 
 const float MARIOFRICTIONX  = 1000.0f;
 
@@ -212,14 +220,13 @@ void CheckCollisions();
 void CalculateFPS();
 void Timer();
 void Idle();
+void LoadTextures();
 void LoadObjects();
 void CalculateDrawTime();
 void Quit();
 void Console();
 
 int main ( int argc,char ** argv ) {
-    Init();
-    PlaySound(startGameSound);
     //Create opengl context
     cout << "Initializing Opengl...\n";
     glutInit( &argc, argv );
@@ -248,6 +255,9 @@ int main ( int argc,char ** argv ) {
     glutMouseFunc( MouseFunc );
     glutJoystickFunc(Joystick,1);
     //Created opengl Context
+    Init();
+    LoadTextures();
+    PlaySound(startGameSound);
     LoadObjects();
     displayList = glGenLists( 1 );
     glutMainLoop();
@@ -305,10 +315,31 @@ void Init(){
     skidSound.setBuffer(skidBuffer);
     blockSound.setBuffer(blockBuffer);
     destroySound.setBuffer(destroyBuffer);
+
     
     //Play music
     titleSong.setVolume(50.0f);
     PlaySong(titleSong);
+    
+}
+
+void LoadTextures() {
+    //Load Textures
+    textureLoader = new TextureHandler();
+    bgTexID = textureLoader->Load("background2.png");
+    blockTexID[0]   = textureLoader->Load("block1.png");
+    blockTexID[1]   = textureLoader->Load("block2.png");
+    blockTexID[2]   = textureLoader->Load("block3.png");
+    blockTexID[3]   = textureLoader->Load("block4.png");
+    woodTexID       = textureLoader->Load("woodblock.png");
+    sandTexID       = textureLoader->Load("sandblock.png");
+    grassTexID      = textureLoader->Load("grassblock.png");
+    hammerTexID     = textureLoader->Load("hammer.png");
+    
+    selectedBlockID[0] = woodTexID;
+    selectedBlockID[1] = sandTexID;
+    selectedBlockID[2] = grassTexID;
+    
     
 }
 
@@ -436,6 +467,25 @@ void CheckInput() {
     
     //Pause time with space
     timeChunk = pressed.space ? 0 : .001;
+    
+    
+    //Check Wasd
+    
+    if (pressed.d && !held.d) {
+        blockSelection++;
+        if (blockSelection > 2) {
+            blockSelection = 0;
+        }
+        hammer->SetFrame(selectedBlockID[blockSelection], 0, 0);
+    }
+    
+    if (pressed.a && !held.a) {
+        blockSelection--;
+        if (blockSelection < 0) {
+            blockSelection = 2;
+        }
+        hammer->SetFrame(selectedBlockID[blockSelection], 0, 0);
+    }
     
     //Reset Mario at will
     if (pressed.r) {
@@ -584,14 +634,7 @@ void MouseFunc(int button , int state , int x, int y) {
                 blockSprite->name = "New Block";
                 blockSprite->AddAnimation(blankAnimation);
                 blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-                blockSprite->AddFrame("block1.png", 0);
-                totalTextures++;
-                blockSprite->AddFrame("block2.png", 0);
-                totalTextures++;
-                blockSprite->AddFrame("block3.png", 0);
-                totalTextures++;
-                blockSprite->AddFrame("block4.png", 0);
-                totalTextures++;
+                blockSprite->AddFrame(selectedBlockID[blockSelection], 0);
                 blockSprite->SetPosition(fixedX,fixedY , 0);
                 blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
                 blockSprite->SetLooping(true);
@@ -605,6 +648,7 @@ void MouseFunc(int button , int state , int x, int y) {
             
         case GLUT_RIGHT_BUTTON:
             if (state == GLUT_DOWN) {
+                hammer->SetFrame(hammerTexID, 0, 0);
                  y = WINDOWHEIGHT - y;
                 for ( auto i = sprite.end() - 1 ; i != sprite.begin() ;i--) {
                     dimensions_t size = (*i)->GetSize();
@@ -649,26 +693,7 @@ void ControlCamera() {
         angle = turnAngle;
         z = turnAmount;
     }
-    //rotate about x axis
-    if ( pressed.w ) {
-        angle = turnAngle;
-        x = turnAmount;
-    }
-    if ( pressed.s ) {
-        angle = -turnAngle;
-        x = turnAmount;
-    }
-    //rotate about y axis
-    if ( pressed.a ) {
-        angle =turnAngle;
-        y = turnAmount;
-    }
-    
-    if ( pressed.d ) {
-        angle = -turnAngle;
-        y = turnAmount;
-    }
-    
+
     glRotatef(angle * deltaDraw, x * deltaDraw, y * deltaDraw, z * deltaDraw);
     
 }
@@ -728,17 +753,17 @@ void CheckCollisions() {
             tempVec.y =0;
         }
         
+        if (mario->topCollision) {
+            lastCameraPos = CAMERAPOSX;
+            mario->SavePosition();
+        }
+        
         if (mario->topCollision ) {
             if (mario->isFalling ){
                 tempVec.y = 0;
                 cout << "Stopped" << endl;
                  cout << "Jump " << mario->isJumping << endl << "Fall: " << mario->isFalling << " On ground " << mario->onGround << endl;
             }
-        }
-        
-        if (mario->topCollision) {
-            lastCameraPos = CAMERAPOSX;
-            mario->SavePosition();
         }
         
         if (mario->rightCollision) {
@@ -781,7 +806,7 @@ void LoadObjects() {
     testSprite = new Sprite();
     testSprite->name = "Background";
     testSprite->AddAnimation(blankAnimation);
-    testSprite->AddFrame("background1.png", 0);
+    testSprite->AddFrame(bgTexID, 0);
     totalTextures++;
     testSprite->SetPosition(BACKGROUNDX, BACKGROUNDY, 0);
     testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
@@ -794,7 +819,7 @@ void LoadObjects() {
     testSprite = new Sprite();
     testSprite->name = "Background 2";
     testSprite->AddAnimation(blankAnimation);
-    testSprite->AddFrame("background1.png", 0);
+    testSprite->AddFrame(bgTexID, 0);
     totalTextures++;
     testSprite->SetPosition(BACKGROUNDX + BACKGROUNDWIDTH - .1, BACKGROUNDY, 0);
     testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
@@ -807,7 +832,7 @@ void LoadObjects() {
     testSprite = new Sprite();
     testSprite->name = "Background 3";
     testSprite->AddAnimation(blankAnimation);
-    testSprite->AddFrame("background1.png", 0);
+    testSprite->AddFrame(bgTexID, 0);
     totalTextures++;
     testSprite->SetPosition(BACKGROUNDX - BACKGROUNDWIDTH +.1, BACKGROUNDY, 0);
     testSprite->SetSize(BACKGROUNDWIDTH, BACKGROUNDHEIGHT, 0);
@@ -839,14 +864,11 @@ void LoadObjects() {
     blockSprite->name = "Block";
     blockSprite->AddAnimation(blankAnimation);
     blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
+    
+    for (int i = 0 ; i < 4 ; i++) {
+        blockSprite->AddFrame(blockTexID[i], 0);
+    }
+    
     blockSprite->SetPosition(BLOCKX, BLOCKY + BLOCKHEIGHT * 1, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
@@ -861,14 +883,10 @@ void LoadObjects() {
     blockSprite->name = "Block 2";
     blockSprite->AddAnimation(blankAnimation);
     blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
+    for (int i = 0 ; i < 4 ; i++) {
+        blockSprite->AddFrame(blockTexID[i], 0);
+    }
+    
     blockSprite->SetPosition(BLOCKX  + 2 * BLOCKWIDTH, BLOCKY + BLOCKHEIGHT * 1, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
@@ -883,14 +901,9 @@ void LoadObjects() {
     blockSprite->name = "Block 2b";
     blockSprite->AddAnimation(blankAnimation);
     blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
+    for (int i = 0 ; i < 4 ; i++) {
+        blockSprite->AddFrame(blockTexID[i], 0);
+    }
     blockSprite->SetPosition(BLOCKX  + 1 * BLOCKWIDTH , BLOCKY + BLOCKHEIGHT * 1, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
@@ -905,14 +918,9 @@ void LoadObjects() {
     blockSprite->name = "Block 2c";
     blockSprite->AddAnimation(blankAnimation);
     blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
+    for (int i = 0 ; i < 4 ; i++) {
+        blockSprite->AddFrame(blockTexID[i], 0);
+    }
     blockSprite->SetPosition(BLOCKX  + 4 * BLOCKWIDTH, BLOCKY + BLOCKHEIGHT*2, 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
@@ -928,14 +936,9 @@ void LoadObjects() {
     blockSprite->name = "Block 3";
     blockSprite->AddAnimation(blankAnimation);
     blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
+    for (int i = 0 ; i < 4 ; i++) {
+        blockSprite->AddFrame(blockTexID[i], 0);
+    }
     blockSprite->SetPosition(BLOCKX  - 2 * BLOCKWIDTH, BLOCKY  , 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
@@ -950,14 +953,9 @@ void LoadObjects() {
     blockSprite->name = "Block 4";
     blockSprite->AddAnimation(blankAnimation);
     blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-    blockSprite->AddFrame("block1.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block2.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block3.png", 0);
-    totalTextures++;
-    blockSprite->AddFrame("block4.png", 0);
-    totalTextures++;
+    for (int i = 0 ; i < 4 ; i++) {
+        blockSprite->AddFrame(blockTexID[i], 0);
+    }
     blockSprite->SetPosition(BLOCKX + 4 * BLOCKWIDTH , BLOCKY + 1* BLOCKHEIGHT , 0);
     blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
     blockSprite->SetLooping(true);
@@ -1053,7 +1051,7 @@ void LoadObjects() {
     hammer = new Sprite();
     hammer->name = "Hammer Icon";
     hammer->AddAnimation(blankAnimation);
-    hammer->AddFrame("hammer.png", 0);
+    hammer->AddFrame(hammerTexID, 0);
     hammer->SetSize(DRAWWIDTH, DRAWHEIGHT, 0);
     sprite.push_back(hammer);
 }

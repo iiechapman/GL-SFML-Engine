@@ -15,8 +15,7 @@
  ======================
  */
 TextureHandler::TextureHandler() {
-    sf::Image bufferImage;
-    LoadImage( "error.png" ,&bufferImage );
+    Load( "error.png");
     std::cout << "Loaded default texture  \n";
 }
 /*
@@ -25,7 +24,7 @@ TextureHandler::TextureHandler() {
  Loads file, then generates texture from file, returns texture ID for use by object
  =======================
  */
-int TextureHandler::Load( const std::string& filename ) {
+GLuint TextureHandler::Load( const std::string& filename ) {
     
     GLuint currentTextureID;
     sf::Image bufferImage;
@@ -33,7 +32,7 @@ int TextureHandler::Load( const std::string& filename ) {
     currentTextureID = LoadImage( filename,&bufferImage );
     //If load image fails, return 0
     if ( currentTextureID == 0 ) {
-        return 1;
+        return 0;
     }
     
     int x = bufferImage.getSize().x;
@@ -60,7 +59,7 @@ int TextureHandler::Load( const std::string& filename ) {
  Loads image file, saves loaded image to bufferImage and returns texture ID for use by object
  ==========================
  */
-int TextureHandler::LoadImage( const std::string& filename , sf::Image* bufferImage ) {
+GLuint TextureHandler::LoadImage( const std::string& filename , sf::Image* bufferImage ) {
     GLuint textureID;
     
     glGenTextures(1, &textureID);
