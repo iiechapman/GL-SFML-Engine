@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4E210DB517165958001AF798 /* Serializable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E210DB317165958001AF798 /* Serializable.cpp */; };
+		4E210DB817165E1F001AF798 /* Texture.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E210DB617165E1F001AF798 /* Texture.cpp */; };
 		4E64DD9E16DD3C250027065F /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E64DD9D16DD3C250027065F /* main.cpp */; };
 		4E64DDAD16DD81AF0027065F /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4E64DDAC16DD81AF0027065F /* OpenGL.framework */; };
 		4E64DDAF16DD81B40027065F /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4E64DDAE16DD81B40027065F /* GLUT.framework */; };
@@ -22,6 +24,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		4E210DB317165958001AF798 /* Serializable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Serializable.cpp; sourceTree = "<group>"; };
+		4E210DB417165958001AF798 /* Serializable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Serializable.h; sourceTree = "<group>"; };
+		4E210DB617165E1F001AF798 /* Texture.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Texture.cpp; sourceTree = "<group>"; };
+		4E210DB717165E1F001AF798 /* Texture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Texture.h; sourceTree = "<group>"; };
 		4E64DD9A16DD3C250027065F /* GLSFMLEngine */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = GLSFMLEngine; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E64DD9D16DD3C250027065F /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		4E64DDAC16DD81AF0027065F /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
@@ -61,6 +67,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4E210DAE171654EB001AF798 /* File I/O */ = {
+			isa = PBXGroup;
+			children = (
+				4E210DB317165958001AF798 /* Serializable.cpp */,
+				4E210DB417165958001AF798 /* Serializable.h */,
+			);
+			name = "File I/O";
+			sourceTree = "<group>";
+		};
+		4E210DB2171656AD001AF798 /* Misc */ = {
+			isa = PBXGroup;
+			children = (
+				4EC167C416ECF3DE00ADEE26 /* GameTypes.h */,
+			);
+			name = Misc;
+			sourceTree = "<group>";
+		};
 		4E64DD9216DD3C250027065F = {
 			isa = PBXGroup;
 			children = (
@@ -102,6 +125,8 @@
 			children = (
 				4EC167BE16ECDB1D00ADEE26 /* TextureHandler.h */,
 				4EC167BD16ECDB1D00ADEE26 /* TextureHandler.cpp */,
+				4E210DB617165E1F001AF798 /* Texture.cpp */,
+				4E210DB717165E1F001AF798 /* Texture.h */,
 			);
 			name = TextureHandler;
 			sourceTree = "<group>";
@@ -128,7 +153,8 @@
 		4EEB516C16F1159F0053EB4F /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				4EC167C416ECF3DE00ADEE26 /* GameTypes.h */,
+				4E210DB2171656AD001AF798 /* Misc */,
+				4E210DAE171654EB001AF798 /* File I/O */,
 			);
 			name = Support;
 			sourceTree = "<group>";
@@ -187,6 +213,8 @@
 				4EC167BF16ECDB1D00ADEE26 /* TextureHandler.cpp in Sources */,
 				4EC167C216ECF25700ADEE26 /* Sprite.cpp in Sources */,
 				4EA1F20E16F138F20046C5A9 /* Input.cpp in Sources */,
+				4E210DB517165958001AF798 /* Serializable.cpp in Sources */,
+				4E210DB817165E1F001AF798 /* Texture.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -308,6 +336,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(HEADER_SEARCH_PATHS)",
 					/usr/local/include,
+					/opt/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				New_Setting = "";
@@ -327,6 +356,7 @@
 				HEADER_SEARCH_PATHS = (
 					"$(HEADER_SEARCH_PATHS)",
 					/usr/local/include,
+					/opt/local/include,
 				);
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				New_Setting = "";

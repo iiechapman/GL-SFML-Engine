@@ -15,8 +15,6 @@
  ======================
  */
 TextureHandler::TextureHandler() {
-    Load( "error.png");
-    std::cout << "Loaded default texture  \n";
 }
 /*
  =======================

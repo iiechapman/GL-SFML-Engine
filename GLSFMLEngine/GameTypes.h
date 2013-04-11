@@ -28,6 +28,8 @@ typedef struct dimensions_s{
 } dimensions_t;
 
 typedef struct buttons_s{
+    bool rmouse;
+    bool lmouse;
     bool kup;
     bool kdown;
     bool kright;

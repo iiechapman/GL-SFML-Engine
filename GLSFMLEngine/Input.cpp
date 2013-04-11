@@ -15,6 +15,7 @@ buttons_t pressed;
 buttons_t held;
 buttons_t released;
 
+
 void Keyboard( unsigned char key,int x, int y ) {
 
     switch ( key ) {
@@ -324,7 +325,6 @@ void Joystick(unsigned int buttonMask,int x, int y, int z) {
         held.jbutton2 = false;
     }
     
-  // std::cout << "Joy: " << buttonMask << "\n";
 }
 
 

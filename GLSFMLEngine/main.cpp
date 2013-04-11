@@ -5,10 +5,17 @@
 #include <OpenGL/OpenGL.h>
 #include <GLUT/GLUT.h>
 #include <iostream>
+#include <fstream>
 #include <cmath>
+#include "boost/serialization/serialization.hpp"
+
+
+
 
 #include "TextureHandler.h"
+#include "Texture.h"
 #include "GameTypes.h"
+#include "Serializable.h"
 #include "Sprite.h"
 #include "KeyCodes.h"
 #include "Input.h"
@@ -37,6 +44,7 @@ vector<int> blankAnimation;
 
 //Texture Variables
 TextureHandler* textureLoader;
+vector<Texture*> textures;
 GLuint totalTextures;
 GLuint bgTexID;
 GLuint blockTexID[4];
@@ -72,7 +80,7 @@ const float ASPECTRATIO = WINDOWWIDTH / WINDOWHEIGHT;
 //Game Constants
 const int   MAX_FPS         =  60;
 
-bool        PLAYMUSIC       = true;
+bool        PLAYMUSIC       = false;
 bool        PLAYSOUND       = true;
 bool        DEPTH_ENABLED   = false;
 bool        FULLSCREEN      = false;
@@ -196,10 +204,11 @@ sf::SoundBuffer skidBuffer;
 sf::SoundBuffer blockBuffer;
 sf::SoundBuffer destroyBuffer;
 
-//Game state functions
+//Game  functions
 void Init();
 void Display();
 void PassiveMouseFunc(int x, int y);
+void MouseMotionFunc(int x, int y);
 void MouseFunc(int button, int state, int x, int y);
 void Reshape( int w,int h );
 void Keyboard( unsigned char key,int x, int y );
@@ -210,6 +219,8 @@ void SpriteState();
 void PlaySound(sf::Sound& sound);
 void PlaySong(sf::Music& song);
 void SetScene();
+void PlaceBlock(int x, int y);
+void RemoveBlock(int x , int y);
 void ControlCamera();
 void CameraOffset();
 void ResetCamera();
@@ -222,6 +233,8 @@ void Timer();
 void Idle();
 void LoadTextures();
 void LoadObjects();
+void SaveMap();
+void LoadMap();
 void CalculateDrawTime();
 void Quit();
 void Console();
@@ -253,10 +266,12 @@ int main ( int argc,char ** argv ) {
     glutSpecialUpFunc( SpecialKeyUp );
     glutPassiveMotionFunc( PassiveMouseFunc );
     glutMouseFunc( MouseFunc );
+    glutMotionFunc(MouseMotionFunc);
     glutJoystickFunc(Joystick,1);
     //Created opengl Context
     Init();
     LoadTextures();
+    LoadMap();
     PlaySound(startGameSound);
     LoadObjects();
     displayList = glGenLists( 1 );
@@ -326,19 +341,43 @@ void Init(){
 void LoadTextures() {
     //Load Textures
     textureLoader = new TextureHandler();
-    bgTexID = textureLoader->Load("background2.png");
-    blockTexID[0]   = textureLoader->Load("block1.png");
-    blockTexID[1]   = textureLoader->Load("block2.png");
-    blockTexID[2]   = textureLoader->Load("block3.png");
-    blockTexID[3]   = textureLoader->Load("block4.png");
-    woodTexID       = textureLoader->Load("woodblock.png");
-    sandTexID       = textureLoader->Load("sandblock.png");
-    grassTexID      = textureLoader->Load("grassblock.png");
-    hammerTexID     = textureLoader->Load("hammer.png");
+    Texture* bgTex = new Texture("background2.png");
+    Texture* blockTex1 = new Texture("block1.png");
+    Texture* blockTex2 = new Texture("block2.png");
+    Texture* blockTex3 = new Texture("block3.png");
+    Texture* blockTex4 = new Texture("block4.png");
+    Texture* woodTex = new Texture("woodblock.png");
+    Texture* sandTex = new Texture("sandblock.png");
+    Texture* grassTex = new Texture("grassblock.png");
+    Texture* hammerTex = new Texture("hammer.png");
+    
+    textures.push_back(bgTex);
+    textures.push_back(blockTex1);
+    textures.push_back(blockTex2);
+    textures.push_back(blockTex3);
+    textures.push_back(blockTex4);
+    textures.push_back(woodTex);
+    textures.push_back(sandTex);
+    textures.push_back(grassTex);
+    textures.push_back(hammerTex);
+
+    
+    
+    bgTexID         = bgTex->textureID;
+    blockTexID[0]   = blockTex1->textureID;
+    blockTexID[1]   = blockTex2->textureID;
+    blockTexID[2]   = blockTex3->textureID;
+    blockTexID[3]   = blockTex4->textureID;
+    woodTexID       = woodTex->textureID;
+    sandTexID       = sandTex->textureID;
+    grassTexID      = grassTex->textureID;
+    hammerTexID     = hammerTex->textureID;
     
     selectedBlockID[0] = woodTexID;
     selectedBlockID[1] = sandTexID;
     selectedBlockID[2] = grassTexID;
+    
+    
     
     
 }
@@ -454,6 +493,7 @@ void CheckInput() {
     
     //if escaped
     if ( pressed.escape ) {
+        SaveMap();
         if ( FULLSCREEN ) {
             glutLeaveGameMode();
         }
@@ -461,7 +501,9 @@ void CheckInput() {
         PlaySound(hurtSound);
         titleSong.stop();
         Quit();
-        cout << "Exit \n";
+        do {
+            cout << "Exiting..." << endl;
+        } while (!hurtSound.getStatus() == 0);
         exit(0);
     }
     
@@ -620,59 +662,124 @@ void PassiveMouseFunc( int x , int y ) {
     
     hammer->SetPosition( x  - (x % DRAWWIDTH) + fmod(CAMERAPOSX, DRAWWIDTH),
                         WINDOWHEIGHT - (y - (y % DRAWHEIGHT)), 0);
+    
+    if ( pressed.lmouse ) {
+        PlaceBlock(x, y);
+    }
+    
+}
+
+void MouseMotionFunc(int x , int y) {
+    MOUSEPOS.x = x;
+    MOUSEPOS.y = WINDOWHEIGHT - y;
+    
+    hammer->SetPosition( x  - (x % DRAWWIDTH) + fmod(CAMERAPOSX, DRAWWIDTH),
+                        WINDOWHEIGHT - (y - (y % DRAWHEIGHT)), 0);
+    
+    if ( pressed.lmouse ) {
+        PlaceBlock(x, y);
+    }
+    
+    if (pressed.rmouse) {
+        RemoveBlock(x, y);
+    }
 }
 
 void MouseFunc(int button , int state , int x, int y) {
-    float fixedX = x  - (x % DRAWWIDTH) + fmod(CAMERAPOSX, DRAWWIDTH);
-    float fixedY = WINDOWHEIGHT - (y - (y % DRAWHEIGHT));
+    MOUSEPOS.x = x;
+    MOUSEPOS.y = WINDOWHEIGHT - y;
+    hammer->SetPosition( x  - (x % DRAWWIDTH) + fmod(CAMERAPOSX, DRAWWIDTH),
+                        WINDOWHEIGHT - (y - (y % DRAWHEIGHT)), 0);
+    
     switch (button){
         case GLUT_LEFT_BUTTON:
             if (state == GLUT_DOWN) {
-                PlaySound(blockSound);
-                //Create block 1
-                blockSprite = new Sprite();
-                blockSprite->name = "New Block";
-                blockSprite->AddAnimation(blankAnimation);
-                blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
-                blockSprite->AddFrame(selectedBlockID[blockSelection], 0);
-                blockSprite->SetPosition(fixedX,fixedY , 0);
-                blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
-                blockSprite->SetLooping(true);
-                blockSprite->isAnimated = true;
-                blockSprite->IsBoundary(true);
-                blockSprite->isScrolling = true;
-                sprite.push_back(blockSprite);
-                blockSprite = 0;
+                pressed.lmouse = true;
             }
+            if (state == GLUT_UP) {
+                pressed.lmouse = false;
+            }
+            
             break;
             
         case GLUT_RIGHT_BUTTON:
             if (state == GLUT_DOWN) {
+                pressed.rmouse = true;
                 hammer->SetFrame(hammerTexID, 0, 0);
-                 y = WINDOWHEIGHT - y;
-                for ( auto i = sprite.end() - 1 ; i != sprite.begin() ;i--) {
-                    dimensions_t size = (*i)->GetSize();
-                    dimensions_t pos = (*i)->GetPosition();
-                    if ((*i)->IsBoundary()) {
-                        //If mouse is over an object
-                        if (x >= pos.x &&
-                            x <= pos.x + size.x &&
-                            y <= pos.y &&
-                            y >= pos.y - size.y
-                            ) {
-                            PlaySound(destroySound);
-                            cout << "Deleted " << (*i)->name << " object..." << endl;
-                            sprite.erase(i);
-                        } else {
-                            cout << (*i)->name << " is not within cursor " << endl;
-                        }
-                    }
-                }
+            }
+
+            
+            if (state == GLUT_UP) {
+                pressed.rmouse = false;
             }
             break;
             
         default:
             break;
+    }
+    
+    if ( pressed.lmouse ) {
+        PlaceBlock(x, y);
+    }
+
+}
+
+void PlaceBlock(int x, int y) {
+    float fixedX = x  - (x % DRAWWIDTH) + fmod(CAMERAPOSX, DRAWWIDTH);
+    float fixedY = WINDOWHEIGHT - (y - (y % DRAWHEIGHT));
+    bool overlap = false;
+    for ( auto i = sprite.end() - 1 ; i != sprite.begin() ;--i) {
+        dimensions_t size = (*i)->GetSize();
+        dimensions_t pos = (*i)->GetPosition();
+        if ((*i)->IsBoundary()) {
+            //If mouse is over an object
+            if (hammer->GetPosition().x >= pos.x &&
+                hammer->GetPosition().x + hammer->GetSize().x <= pos.x + size.x &&
+                hammer->GetPosition().y >= pos.y &&
+                hammer->GetPosition().y - hammer->GetSize().y <= pos.y - size.y
+                ) {
+                overlap = true;
+            }
+        }
+    }
+    
+    if (!overlap) {
+            PlaySound(blockSound);
+            //Create block 1
+            blockSprite = new Sprite();
+            blockSprite->name = "New Block";
+            blockSprite->AddAnimation(blankAnimation);
+            blockSprite->SetAnimationDelay(BLOCKANIMDELAY);
+            blockSprite->AddFrame(selectedBlockID[blockSelection], 0);
+            blockSprite->SetPosition(fixedX,fixedY , 0);
+            blockSprite->SetSize(BLOCKWIDTH, BLOCKHEIGHT, 0.0f);
+            blockSprite->SetLooping(true);
+            blockSprite->isAnimated = true;
+            blockSprite->IsBoundary(true);
+            blockSprite->isScrolling = true;
+            sprite.push_back(blockSprite);
+            blockSprite = 0;
+    }
+}
+
+
+void RemoveBlock(int x, int y) {
+    y = WINDOWHEIGHT - y;
+    for ( auto i = sprite.end() - 1 ; i != sprite.begin() ;i--) {
+        dimensions_t size = (*i)->GetSize();
+        dimensions_t pos = (*i)->GetPosition();
+        if ((*i)->IsBoundary()) {
+            //If mouse is over an object
+            if (x >= pos.x &&
+                x <= pos.x + size.x &&
+                y <= pos.y &&
+                y >= pos.y - size.y
+                ) {
+                PlaySound(destroySound);
+                cout << "Deleted " << (*i)->name << " object..." << endl;
+                sprite.erase(i);
+            }
+        }
     }
 }
 
@@ -797,6 +904,36 @@ void PlaySong(sf::Music& song) {
     if (PLAYMUSIC) {
         song.play();
     }
+}
+
+void LoadMap() {
+    fstream File ("test.map" , ios::in | ios::binary);
+    File.seekg(0);
+    
+    Texture* loadedTexture = new Texture();
+    
+    File.read((char*)(loadedTexture),sizeof(loadedTexture));
+    
+    cout << "LOADED FILE" << endl;
+    
+    cout << loadedTexture->textureID << endl;
+    cout << loadedTexture->filename << endl;
+    
+}
+
+void SaveMap() {
+    
+    fstream File ("test.map" , ios::out | ios::binary);
+    File.seekp(0);
+    //Texture saving
+    for (auto texture = textures.begin() ; texture != textures.end() ; texture++) {
+        File.write( (char*) (*texture), sizeof((*texture)));
+    }
+
+    cout << "Saved file" << endl;
+    
+    File.close();
+    
 }
 
 void LoadObjects() {
@@ -1053,6 +1190,7 @@ void LoadObjects() {
     hammer->AddAnimation(blankAnimation);
     hammer->AddFrame(hammerTexID, 0);
     hammer->SetSize(DRAWWIDTH, DRAWHEIGHT, 0);
+    hammer->IsBoundary(false);
     sprite.push_back(hammer);
 }
 
